@@ -1,24 +1,47 @@
 <template>
     <v-row class="text-center">
 
-      <v-col cols="1" class="table-container">
+      <v-col cols="2" class="table-container">
         <v-btn 
           v-for="(t, i) in tables"
           :key="i"
           :id="t.tableId"
-          :name="t.tableName"
-          :hall="t.virtualHallId"
-          :type="t.virtualHallId == null?'rect' : 'round'"
+          :name="t.name"
+          :hall="t.hallId"
+          :type="t.shape"
           :draggable="true"
           :class="{'table-btn' : true}"
-          :fab="t.virtualHallId != null"
-          :color="t.virtualHallId == null? 'primary' : 'cyan'"
+          :fab="t.shape === 'round'"
+          :color="t.color"
+          :repeatable="t.repeatable?1:0"
+          :hidden="t.hidden == 1"
+          x-small
           @dragstart="dragCard"
         >
-        {{ t['tableName'] }}
+        {{ t['name'] }}
         </v-btn>
+
+        <div class="arch-container">
+          <v-btn
+            v-for="(t, i) in archElements"
+            :key="i"
+            :id="t.elementId"
+            :name="t.elementName"
+            :hall="null"
+            :type="t.shape"
+            :draggable="true"
+            :class="{'table-btn' : true}"
+            :fab="t.shape === 'round'"
+            :color="null"
+            :repeatable="t.repeatable?1:0"
+            x-small
+            @dragstart="dragCard"
+          ><img 
+            :src="t.url"
+          /> {{ t['elementName'] }}</v-btn>
+        </div>
       </v-col>
-      <v-col cols="10">
+      <v-col cols="8">
         <div class="warp-container">
           <div class="wrap">
             <div>
@@ -33,9 +56,22 @@
         </div>
       </v-col>
 
-      <v-col class="control" cols="1">
-        <v-input type="color"></v-input>
-        <v-btn class="btn" @click="getVirtualHallData">click</v-btn>
+      <v-col class="control" cols="2">
+        <input type="color" class="btn" @change="SetColor">
+        <v-btn class="btn" @click="getVirtualHallData">Get All</v-btn>
+        <v-btn class="btn control-btn" 
+          :color="isRotate?'primary': ''"
+          @click="SetRotate"
+        >Rotate</v-btn>
+        <v-btn class="btn control-btn" 
+          @click="SetFlipX()"
+        >Flip H</v-btn>
+        <v-btn class="btn control-btn" 
+          @click="SetFlipY"
+        >Flip V</v-btn>
+        <v-btn class="btn control-btn" 
+          @click="DelTable"
+        >Delete</v-btn>
       </v-col>
     </v-row>
 </template>
@@ -244,24 +280,36 @@
           ev.dataTransfer.setData("card", ev.target.id);
           ev.dataTransfer.setData("cardName", ev.target.getAttribute('name'));
           ev.dataTransfer.setData("cardType", ev.target.getAttribute('type'));
-          ev.dataTransfer.setData("hall", ev.target.getAttribute('hall'));
+          ev.dataTransfer.setData("repeatable", ev.target.getAttribute('repeatable'));
       },
       dropCard(ev) {
           ev.preventDefault();
           let id = ev.dataTransfer.getData("card");
           let name = ev.dataTransfer.getData("cardName");
           let type = ev.dataTransfer.getData("cardType");
-          let hall = ev.dataTransfer.getData("hall");
-          let json = {...this.defaultParelData};
+          let repeatable = ev.dataTransfer.getData("repeatable");
+          // let json = {...this.defaultParelData};
 
-          console.log(hall, hall === 'null')
+
+          console.log(id, !repeatable, repeatable)
 
           if(id == '') return;
-          if(hall !== 'null') {
-            document.getElementById(id).remove()
+          if(repeatable == 0) {
+            this.hideTable(id);
           }
 
           let canvasCoords = this.canvas.getBoundingClientRect()
+
+          let json = this.tables.filter(t => t.tableId == id);
+          if(json.length == 0) {
+            json = this.archElements.filter(a => a.elementId == id)[0];
+            json['tableId'] = json['elementId'];
+            json['tableName'] = json['elementName'];
+          } else {
+            json = json[0]
+          }
+
+          console.log(json)
 
           json['tableId'] = id;
           json['tableName'] = name;
@@ -272,10 +320,71 @@
           let newPrtcls = new Square(json);
           this.prtcls.push(newPrtcls)
       },
+
+      hideTable(id, val = 1) {            //val = 1 : HIDE, 0 : SHOW
+        let index = this.tables.findIndex(t => t.tableId == id);
+        if(index == -1) {
+          index = this.archElements.findIndex(a => a.elementId == id);
+          let t = [...this.archElements];
+          t[index]['hidden'] = val;
+          this.archElements = [...t];
+        } else {
+          let t = [...this.tables];
+          t[index]['hidden'] = val;
+          this.tables = [...t];
+        }
+      },
+
       getVirtualHallData() {
         let tables = this.getIt('tables');
         this.virtualHallJSON[0]['tables'] = tables;
         console.log("Virtual Hall Json Data :  ", this.virtualHallJSON)
+      },
+
+      SetRotate() {
+        this.isRotate = !this.isRotate;
+      },
+
+      SetFlipX() {
+        this.prtcls.forEach((p) => {
+          if(p.resize) {
+            p.flipX *= -1;
+          }
+        })
+      },
+
+      SetFlipY() {
+        this.prtcls.forEach((p) => {
+          if(p.resize) {
+            p.flipY *= -1;
+          }
+        })
+      },
+
+      DelTable() {
+        let tableId = "";
+        let index = -1;
+        this.prtcls.forEach((p, i) => {
+          if(p.resize) {
+            tableId = p.tableId;
+            index = i;
+          }
+        })
+        if(index != -1) {
+          let p = [...this.prtcls];
+          p = p.filter((t, i) => i !== index);
+          this.prtcls = [...p];
+        }
+
+        this.hideTable(tableId, 0)
+      },
+
+      SetColor(e) {
+        this.prtcls.forEach(p => {
+          if(p.resize) {
+            p.color = e.target.value;
+          }
+        })
       },
 
       initTables() {
@@ -333,6 +442,8 @@
           diff: 10
         },
 
+        isRotate: false,
+
         defaultParelData: {
           "active":true,
           "tableId": "--",
@@ -348,48 +459,485 @@
         },
 
         tables: [
-          {
-            "active":true,
-            "tableId": "AC892C8C9C5477FFE53F2A2AADB2CB11989A874E",
-            "tableName": "I1",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":"AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5"
-          },
-          {
-            "active":true,
-            "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-            "tableName": "I2",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":"AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5"
-          },
-          {
-            "active":true,
-            "tableId": "F69E599E34BF2084CD69CC3DB00850E7FBED13CA",
-            "tableName": "I3",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":null
-          },
-          {
-            "active":true,
-            "tableId": "C615A5BA638C2CC2E00FD550F08144D119DE3598",
-            "tableName": "I4",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":"AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5"
-          },
-          {
-            "active":true,
-            "tableId": "0F40FF8F00A5B270DC4EF508F779F7D513E80870",
-            "tableName": "I5",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":null
-          },
-          {
-            "active":true,
-            "tableId": "99DD8A4C91863A7FC72AC8305F6AAF7153F2A3A2",
-            "tableName": "I6",
-            "hallId": "C3AEE1B8BF886C1A13602D6E271F0CE7D7F727A5",
-            "virtualHallId":null
-          }	
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "B67F9FACDDDFFA442EA00A65AFBCB41EF63A83B8",
+                      "name": "I1",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "roundRect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "D331D59718149A972B869ECC77A5D6C22B90CDFA",
+                      "name": "I11",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "00E81B36E24B72C204A362BDC236295123726EBA",
+                      "name": "I21",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "A333D0DEB7E7C937C960DF0C2254A26FD2CC3F7C",
+                      "name": "I31",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "CF17232C969260689E0E33F7C9DCDEF8E4E7ABE3",
+                      "name": "B1",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "22DBE735D2519F8415287C809BC1FDB5928B0C62",
+                      "name": "B2",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": true,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#ffa000",
+                      "tableId": "74130C18A370EFF14333B125B4AA98518E5A9F57",
+                      "name": "I2",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#d50000",
+                      "tableId": "C67EE0A7EFCD4CF7ED0CA1D82E8E2D22BC9D02F7",
+                      "name": "I13",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "4A5CEAC245613D59B01495020FFAB27B8B9584B0",
+                      "name": "I23",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "3F3307FF68AFF9152EB38493E22E9AC123AFF0B7",
+                      "name": "B3",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "9D9B136E9EBDC4985ADA5F051851ED44950619C7",
+                      "name": "B4",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "244223D2A40F3B3BD954BB03DA61AA5EB9F10ACF",
+                      "name": "I3",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#d50000",
+                      "tableId": "5E002F83C7A0BBF74B1AD9DD991EBA74C5176CCE",
+                      "name": "B5",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#d50000",
+                      "tableId": "BA762B5AA667A60D94F6AB5C2E7F7A668BA3FBA7",
+                      "name": "B6",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "30F2DC61E955FFEF6B11A66BFD45FB71A6EBA397",
+                      "name": "I4",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "6A7CF57D649D1B3C5FE76DC07C36047C81E0EBE9",
+                      "name": "I14",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "2B60A7C9E9E91DAA504F02FAE98EB8A1F5B240F0",
+                      "name": "I24",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#d50000",
+                      "tableId": "99A4D6E960DE46D74B36B56883CEF1ED245614BE",
+                      "name": "I34",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "93450D961DD7CC0D669DEEBADD5F72C725927860",
+                      "name": "I5",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "DE470E55798B09573C44C427B8F4D9F2F6A8E52B",
+                      "name": "I15",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "CB42F930F6186F42A364061007F4FEBBF000183D",
+                      "name": "I25",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": false,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#d50000",
+                      "tableId": "1B061C1A93B4E5ABD129FB31852AAC1442C8C166",
+                      "name": "I35",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "76656056530E0243B87A3088AE27E59A5F356D54",
+                      "name": "I6",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "D6AE02C20CEFF982D7489367D4F95A907D2B86A5",
+                      "name": "I16",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "A63BB1803BE21869F85816B77DC99F0164F840DC",
+                      "name": "I26",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "color": "#42a5f5",
+                      "tableId": "A91D990083CD81E7471AA9D216079438A7CEF36E",
+                      "name": "I36",
+                      "width": 80,
+                      "height": 80,
+                      "shape": "rect",
+                      "expandX": true,
+                      "expandY": true,
+                      "lockRatio": false,
+                      "repeatable": false,
+                      "virtualHallId": null
+                  }
+        ],
+        
+        archElements: [
+              {
+                  "elementId": "E3EA16138BF0EDEEC12B34D654F6769489F00FF7",
+                  "elementName": "wall",
+                  "width": 80,
+                  "height": 15,
+                  "shape": "image",
+                  "expandX": true,
+                  "expandY": false,
+                  "lockRatio": false,
+                  "repeatable": true,
+                  "url": "https://jslab.it/shapes/wall.svg"
+              },
+              {
+                  "elementId": "50BE5E8D6925223757046D01170CBAAC667EFE18",
+                  "elementName": "window",
+                  "width": 80,
+                  "height": 15,
+                  "shape": "image",
+                  "expandX": true,
+                  "expandY": false,
+                  "lockRatio": false,
+                  "repeatable": true,
+                  "url": "https://jslab.it/shapes/window.svg"
+              },
+              {
+                  "elementId": "0AAF80214E76193D92564688E994166CFB4E1848",
+                  "elementName": "corner",
+                  "width": 30,
+                  "height": 30,
+                  "shape": "image",
+                  "expandX": true,
+                  "expandY": false,
+                  "lockRatio": false,
+                  "repeatable": true,
+                  "url": "https://jslab.it/shapes/corner.svg"
+              },
+              {
+                  "elementId": "3CF659BFB6D54CF4AAF29F2188FD2457F76225B0",
+                  "elementName": "door",
+                  "width": 80,
+                  "height": 80,
+                  "shape": "image",
+                  "expandX": true,
+                  "expandY": false,
+                  "lockRatio": false,
+                  "repeatable": true,
+                  "url": "https://jslab.it/shapes/door.svg"
+              },
+              {
+                  "elementId": "1EE83840154CDBD075724D7C1C489B833BBB2182",
+                  "elementName": "double_door",
+                  "width": 160,
+                  "height": 80,
+                  "shape": "image",
+                  "expandX": true,
+                  "expandY": false,
+                  "lockRatio": false,
+                  "repeatable": true,
+                  "url": "https://jslab.it/shapes/double_door.svg"
+              }
         ],
         virtualHallJSON: [
           {
@@ -559,8 +1107,6 @@
 
       })
 
-
-
       this.canvas.addEventListener('mousemove', e => {
           let diff = {
               x : Math.round((e.pageX - this.startPos.x) / 10) * 10,
@@ -587,23 +1133,33 @@
                               y : Math.round((mouse.y - e.startPos.y) / this.setting.diff) * this.setting.diff,
                           }
 
-                          diff.x = e.expandX? diff.x : 0;
-                          diff.y = e.expandY? diff.y : 0;
+                          if(this.isRotate) {
 
-                          if(e.lockRatio) {
-                              diff.y = diff.x * (e.h / e.w);
-                          }
+                            e.angle = e.startPos.originAngle + Math.PI / 18 * diff.x/10;
 
-                          if(e.shape == 'round') {
-                              e.w = e.startPos.originW + diff.x;
-                              e.h = e.startPos.originH + diff.x;
                           } else {
-                              e.w = e.startPos.originW + diff.x;
-                              e.h = e.startPos.originH + diff.y;
+
+                            diff.x = e.expandX? diff.x : 0;
+                            diff.y = e.expandY? diff.y : 0;
+
+                            if(e.lockRatio) {
+                                diff.y = diff.x * (e.h / e.w);
+                            }
+
+                            if(e.shape == 'round') {
+                                e.w = e.startPos.originW + diff.x;
+                                e.h = e.startPos.originH + diff.x;
+                            } else {
+                                e.w = e.startPos.originW + diff.x;
+                                e.h = e.startPos.originH + diff.y;
+                            }
+            
+                            e.w = Math.max(10, e.w)
+                            e.h = Math.max(10, e.h)
+
                           }
-          
-                          e.w = Math.max(10, e.w)
-                          e.h = Math.max(10, e.h)
+
+
                       } else {
                           e.x = newX
                           e.y = newY
@@ -638,7 +1194,8 @@
                               x : mouse.x,
                               y : mouse.y,
                               originW : e.w,
-                              originH : e.h
+                              originH : e.h,
+                              originAngle : e.angle
                           }
                       }
                   } else {
@@ -689,7 +1246,24 @@
 <style lang="scss">
 
   .table-container{
-    
+    z-index: 10;
+  }
+
+  .arch-container{
+    z-index: 10;
+    position: relative;
+    width: 80%;
+    /* height: 100%; */
+    display: flex;
+    align-content: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .arch-container img {
+    width: 50px;
+    height: 17px;
   }
 
   .table-btn {
@@ -782,7 +1356,7 @@
       position: absolute;
       top: 0px;
       right: 0px;
-      display: flex;
+      // display: flex;
       justify-content: center;
       align-items: center;
   }
@@ -791,15 +1365,16 @@
       z-index: 3;
       height: 50%;
       width: 10%;
-      position: absolute;
-      top: 0px;
-      right: 0px;
-      display: flex;
-      justify-content: space-evenly;
-      align-items: center;
-      align-content: stretch;
-      flex-direction: column-reverse;
-      flex-wrap: nowrap;
+      margin: 10px;
+      // position: absolute;
+      // top: 0px;
+      // right: 0px;
+      // display: flex;
+      // justify-content: space-evenly;
+      // align-items: center;
+      // align-content: stretch;
+      // flex-direction: column-reverse;
+      // flex-wrap: nowrap;
   }
   button{
       padding: 10px;

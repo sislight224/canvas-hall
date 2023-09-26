@@ -7,6 +7,7 @@ export default class Square {
         this.shape=j.shape
         this.table=j.tableName     
         this.tableId=j.tableId
+        this.angle = 0;
              
         this.bookings=j.bookings
         this.color = j.color
@@ -19,6 +20,8 @@ export default class Square {
         this.expandX = j.expandX
         this.expandY = j.expandY
         this.lockRatio = j.lockRatio
+        this.flipX = 1;
+        this.flipY = 1;
         
         if(this.url) {
             this.img = new Image();
@@ -38,7 +41,7 @@ export default class Square {
         // context.rotate(Math.PI / 18)
         context.fillStyle = this.bookings?this.bookings[0].color:'green'
       
-        if (this.active) {
+        if (this.active || this.resize) {
             context.fillStyle = this.color;
             context.save()
             context.setLineDash([10, 5, 30, 5])
@@ -53,37 +56,45 @@ export default class Square {
             context.strokeStyle = this.activeColor
             context.stroke()
 
-            
+
             this.drawCoords(context, this.x, this.y, this.activeColor, this.w, this.h)
             
 
             context.restore()
         }
+
+        context.save()
+        context.translate(this.x + this.w / 2, this.y + this.h / 2);
+        context.rotate(this.angle)
         context.beginPath();
 
         switch (this.shape)
         {
             case 'rect':
-                context.fillRect(this.x, this.y, this.w, this.h)
+                context.fillStyle = this.color;
+                context.fillRect(-this.w / 2, -this.h / 2, this.w, this.h)
                 break;
             case 'image':
                 if(this.isImg) {
-                    context.drawImage (this.img, this.x, this.y, this.w, this.h);
+                    context.save();
+                    context.scale(this.flipX, this.flipY);
+                    context.drawImage (this.img, -this.w / 2, -this.h / 2, this.w, this.h);
+                    context.restore();
                 }
                 break;
             case 'roundRect':
-                this.drawRoundedRect(context, 10)
+                this.drawRoundedRect(context, -this.w / 2, -this.h / 2, 10)
                 break;
             case 'octagonal':
-                this.drawOctagon(context, this.x + this.w / 2, this.y + this.w / 2, this.w / 2)
+                this.drawOctagon(context, 0 , 0 , this.w / 2)
                 break;
             case 'round':
-                context.arc(this.x + (this.w / 2), this.y + (this.h / 2), this.w / 2, 0, 2 * Math.PI, true);
+                context.arc(0 , 0 , this.w / 2, 0, 2 * Math.PI, true);
                 context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
                 context.fill();
                 break;
             case 'ecllipse':
-                context.ellipse(this.x + (this.w / 2), this.y + (this.h / 2), this.w / 2, this.h / 2, 0, 0, 2 * Math.PI);
+                context.ellipse(0 , 0 , this.w / 2, this.h / 2, 0, 0, 2 * Math.PI);
                 context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
                 context.fill();
                 break;
@@ -92,8 +103,9 @@ export default class Square {
         context.textAlign="center"; 
         context.textBaseline = "middle";
         context.fillStyle = "#ffffff";          
-        context.fillText(this.table,this.x+(this.w/2),this.y+(this.h/2)); 
+        context.fillText(this.table, 0, 0); 
         context.font="12px Arial";
+
         if( this.bookings)
         {
             //let booking=this.bookings[this.shift];
@@ -105,23 +117,32 @@ export default class Square {
             if (this.selected || this.resize) {
                 context.lineWidth = 2;
                 context.strokeStyle = this.activeColor2
-                context.strokeRect(this.x, this.y, this.w, this.h)
+                context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)
             }
         
         if (this.active) {
             // drawHandles(context, this.x, this.y, this.w, this.h, this.activeColor,this.shape);
             //mouseDown(this);
         }
+
+        context.restore();
+
+        // context.save()
+        // context.translate(this.x + this.w / 2, this.y + this.h / 2);
+        // context.rotate(this.angle)
+        // context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)
+        // context.restore();
+
         context.restore();
     }
 
-    drawRoundedRect(context, radius) {
+    drawRoundedRect(context, x, y, radius) {
         context.beginPath();
-        context.moveTo(this.x + radius, this.y);
-        context.arcTo(this.x + this.w, this.y, this.x + this.w, this.y + this.h, radius);
-        context.arcTo(this.x + this.w, this.y + this.h, this.x, this.y + this.h, radius);
-        context.arcTo(this.x, this.y + this.h, this.x, this.y, radius);
-        context.arcTo(this.x, this.y, this.x + this.w, this.y, radius);
+        context.moveTo(x + radius, y);
+        context.arcTo(x + this.w, y, x + this.w, y + this.h, radius);
+        context.arcTo(x + this.w, y + this.h, x, y + this.h, radius);
+        context.arcTo(x, y + this.h, x, y, radius);
+        context.arcTo(x, y, x + this.w, y, radius);
         context.closePath();
         // context.stroke();
         context.fillStyle = this.color;
@@ -165,21 +186,29 @@ export default class Square {
         ctx.fillStyle = 'white'
         ctx.fillText(Math.floor(x), -30, 0)
     
-        ctx.fillStyle = 'black'
-        ctx.fillRect(w / 2 - 15, -14, 30, 14)
-        ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(w), w / 2, -7)
-    
+        ctx.save()
         ctx.rotate(Math.PI / 2)
         ctx.fillStyle = color
         ctx.fillRect(-45, -7, 30, 14)
         ctx.fillStyle = 'white'
         ctx.fillText(Math.floor(y), -30, 0)
-    
-        ctx.fillStyle = 'black'
-        ctx.fillRect(h / 2 - 15, 0, 30, 14)
-        ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(h), h / 2, 7)
+        ctx.restore()
+        
+            ctx.save()
+            ctx.translate(w / 2, h / 2)
+            ctx.rotate(this.angle)
+            ctx.fillStyle = 'black'
+            ctx.fillRect( - 15, -14 - h /2, 30, 14)
+            ctx.fillStyle = 'white'
+            ctx.fillText(Math.floor(w), 0, -7 - h /2)
+        
+            ctx.rotate(Math.PI / 2)
+            ctx.fillStyle = 'black'
+            ctx.fillRect(- 15,  w / 2, 30, 14)
+            ctx.fillStyle = 'white'
+            ctx.fillText(Math.floor(h), 0, 7+ w / 2)
+
+            ctx.restore()
     
         ctx.restore()
     }
