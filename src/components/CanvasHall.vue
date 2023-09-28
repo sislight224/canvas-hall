@@ -1,27 +1,60 @@
 <template>
+  <div>
+    <v-row justify="space-around" class="ma-2">
+      <v-col cols="12">       
+        <v-btn-toggle v-model="activeVHall" mandatory active-class="info white--text" class="d-inline mr-8">
+          <template v-for="(h,hi) in virtualHallJSON">
+            <v-btn style="height:36px" :key="hi" dark :value="h">{{h.virtualHallName}}</v-btn>
+          </template>
+        </v-btn-toggle>
+        <v-btn class="mr-2" color="info" dark @click.stop="dialogNew = true">New</v-btn>
+        <v-btn class="mr-2" color="success" dark @click.stop="getVirtualHallData();dialogSave = true">GetData</v-btn>                
+      </v-col>        
+    </v-row> 
     <v-row class="text-center">
-
-      <v-col cols="2" class="table-container">
-        <v-btn 
-          v-for="(t, i) in tables"
-          :key="i"
-          :id="t.tableId"
-          :name="t.name"
-          :hall="t.hallId"
-          :type="t.shape"
-          :draggable="true"
-          :class="{'table-btn' : true}"
-          :fab="t.shape === 'round'"
-          :color="t.color"
-          :repeatable="t.repeatable?1:0"
-          :hidden="t.hidden == 1"
-          x-small
-          @dragstart="dragCard"
-        >
-        {{ t['name'] }}
-        </v-btn>
-
-        <div class="arch-container">
+      <v-col cols="2">
+        <div class="table-container mt-5">
+          <div class="text-left ml-7 text-h5">Tables</div>
+          <v-btn 
+            v-for="(t, i) in tables"
+            :key="i"
+            :id="t.tableId"
+            :name="t.name"
+            :hall="t.hallId"
+            :type="t.shape"
+            :draggable="true"
+            class="ma-1"
+            :color="t.color"
+            :repeatable="t.repeatable?1:0"
+            :hidden="t.hidden == 1"
+            x-small
+            @dragstart="dragCard"
+          >
+            {{ t['name'] }}
+          </v-btn>
+        </div>
+        <v-divider></v-divider>
+        <div class="text-left ml-7 mt-2 text-h5">Shapes</div>
+        <div class="action-container ml-5 text-left">
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('rect')"><v-icon>mdi-square</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('round')"><v-icon>mdi-circle</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('ellipse')"><v-icon>mdi-ellipse</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('exa')"><v-icon>mdi-hexagon</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('octa')"><v-icon>mdi-octagon</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('triangle')"><v-icon>mdi-triangle</v-icon></v-btn>
+        </div>
+        <v-divider></v-divider>
+        <div class="text-left ml-7 mt-2 text-h5">Modifiers</div>
+        <div class="action-container ml-5 text-left">
+          <!-- <v-btn class="mr-2 mb-2" :color="isRotate?'info': ''" dark @click="SetCamera"><v-icon>mdi-rotate-right</v-icon></v-btn> -->
+          <v-btn class="mr-2 mb-2" color="info" dark @click="SetFlipX()"><v-icon>mdi-flip-horizontal</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="SetFlipY()"><v-icon>mdi-flip-vertical</v-icon></v-btn>
+          <v-btn class="mr-2 mb-2" color="error" dark @click="DelTable"><v-icon>mdi-delete</v-icon></v-btn>
+          <input type="color" class="btn" @change="SetColor">
+        </div>
+        <v-divider></v-divider>
+        <div class="text-left ml-7 mt-2 text-h5">Building Elements</div>
+        <div class="arch-container ml-5 text-left">
           <v-btn
             v-for="(t, i) in archElements"
             :key="i"
@@ -30,18 +63,17 @@
             :hall="null"
             :type="t.shape"
             :draggable="true"
-            :class="{'table-btn' : true}"
-            :fab="t.shape === 'round'"
-            :color="null"
+            class="ma-2"
+            color="info"
             :repeatable="t.repeatable?1:0"
-            x-small
             @dragstart="dragCard"
-          ><img 
-            :src="t.url"
-          /> {{ t['elementName'] }}</v-btn>
+          >
+            <v-icon>{{t.icon}}</v-icon>
+            {{ t.elementName }}
+          </v-btn>
         </div>
       </v-col>
-      <v-col cols="8">
+      <v-col cols="10">
         <div class="warp-container">
           <div class="wrap">
             <div>
@@ -53,33 +85,256 @@
               <canvas id="mycanvas2"></canvas>
             </div>
           </div>
+
+          <div class="warp-container"
+            v-if="isHandleAnchor()"
+            :style="{ zIndex: 5 }">
+
+            <!-- <div class="top-line line-h"></div>
+            <div class="bottom-line line-h"></div>
+            <div class="left-line line-v"></div>
+            <div class="right-line line-v"></div> -->
+
+            <!-- <div class="top-line line-h" :style="{ 
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, -' + (selDivStyle.hH + 2) + 'px)',
+                width: selDivStyle.imgWidth + 'px', 
+                margin: '0 0 0 -' + selDivStyle.hW + 'px',
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+              }"></div>
+            <div class="bottom-line line-h" :style="{ 
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, ' + selDivStyle.hH + 'px)',
+                width: selDivStyle.imgWidth + 'px', 
+                margin: '0 0 0 -' + selDivStyle.hW + 'px',
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+              }"></div>
+            <div class="right-line line-v" :style="{ 
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + selDivStyle.hW + 'px, 0)',
+                height: selDivStyle.imgHeight + 'px', 
+                margin: '-' + selDivStyle.hH + 'px 0 0 0',
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+              }"></div>
+            <div class="left-line line-v" :style="{ 
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + (selDivStyle.hW + 2) + 'px, 0)',
+                height: selDivStyle.imgHeight + 'px', 
+                margin: '-' + selDivStyle.hH + 'px 0 0 0',
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+              }"></div> -->
+
+            <div class="top-anchor anchor"
+              @mousedown="handleAnchors"
+              @touchstart="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, -' + selDivStyle.hH + 'px)',
+              }"
+            ></div>
+            <div class="bottom-anchor anchor"
+              @mousedown="handleAnchors"
+              @touchstart="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, ' + selDivStyle.hH + 'px)',
+              }"
+            ></div>
+            <div class="right-anchor anchor"
+              @mousedown="handleAnchors"
+              @touchstart="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + (selDivStyle.hW) + 'px, 0)',
+              }"
+            ></div>
+            <div class="left-anchor anchor"
+              @mousedown="handleAnchors"
+              @touchstart="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + selDivStyle.hW + 'px, 0)',
+              }"
+            ></div>
+
+            <!-- <div class="top-left-anchor anchor"
+              @mousedown="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + selDivStyle.hW + 'px, -' + selDivStyle.hH + 'px)',
+              }"
+            ></div>
+            <div class="top-right-anchor anchor"
+              @mousedown="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + selDivStyle.hW + 'px, -' + selDivStyle.hH + 'px)',
+              }"
+            ></div>
+            <div class="bottom-left-anchor anchor"
+              @mousedown="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + selDivStyle.hW + 'px, ' + selDivStyle.hH + 'px)',
+              }"
+            ></div>
+            <div class="bottom-right-anchor anchor"
+              @mousedown="handleAnchors"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + selDivStyle.hW + 'px, ' + selDivStyle.hH + 'px)',
+              }"
+            ></div> -->
+
+            <!-- Anchor Transform -->
+            <div class="top-left-rotate rotate"
+              @mousedown="handleRotate"
+              @touchstart="handleRotate"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + (selDivStyle.hW + 18) + 'px, -' + (selDivStyle.hH + 18) + 'px)',
+              }"
+            ></div>
+            <div class="top-right-rotate rotate"
+              @mousedown="handleRotate"
+              @touchstart="handleRotate"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + (selDivStyle.hW + 18) + 'px, -' + (selDivStyle.hH + 18) + 'px)',
+              }"
+            ></div>
+            <div class="bottom-right-rotate rotate"
+              @mousedown="handleRotate"
+              @touchstart="handleRotate"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + (selDivStyle.hW + 18) + 'px, ' + (selDivStyle.hH + 18) + 'px)',
+              }"
+            ></div>
+            <div class="bottom-left-rotate rotate"
+              @mousedown="handleRotate"
+              @touchstart="handleRotate"
+              :style="{
+                left: selDivStyle.fX + 'px',
+                top: selDivStyle.fY + 'px',
+                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + (selDivStyle.hW + 18) + 'px, ' + (selDivStyle.hH + 18) + 'px)',
+              }"
+            ></div>
+          </div>
+          
         </div>
       </v-col>
-
-      <v-col class="control" cols="2">
-        <input type="color" class="btn" @change="SetColor">
-        <v-btn class="btn" @click="getVirtualHallData">Get All</v-btn>
-        <v-btn class="btn control-btn" 
-          :color="isRotate?'primary': ''"
-          @click="SetRotate"
-        >Rotate</v-btn>
-        <v-btn class="btn control-btn" 
-          @click="SetFlipX()"
-        >Flip H</v-btn>
-        <v-btn class="btn control-btn" 
-          @click="SetFlipY"
-        >Flip V</v-btn>
-        <v-btn class="btn control-btn" 
-          @click="DelTable"
-        >Delete</v-btn>
-      </v-col>
     </v-row>
+    <v-dialog
+      v-model="dialogNew"
+      max-width="600"
+      style="overflow:hidden"
+    >
+      <v-card>
+        <v-card-title class="text-h5">
+          New Hall
+          <v-spacer></v-spacer>
+          <v-btn float icon>
+            <v-icon color="success">mdi-content-save</v-icon>
+          </v-btn>
+          <v-btn float icon @click="dialogNew = false">
+            <v-icon color="info">mdi-close</v-icon>
+          </v-btn>            
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="mt-3">
+          <v-row>
+            <v-col cols="6">
+              <v-text-field
+                  v-model="hall.name"
+                  counter="25"
+                  label="Hall Name"
+                  outlined
+              ></v-text-field>
+            </v-col>
+            <v-col cols="6" class="d-flex justify-center">
+              <v-switch v-model="hall.location" :label="hall.location?'Indoor':'Outdoor'"></v-switch>
+            </v-col>
+            <v-col cols="6">
+                <v-text-field
+                  v-model="hall.width"
+                  type="number"
+                  label="Hall Width"
+                  outlined
+                  hint="in cm"
+                ></v-text-field>              
+            </v-col>
+            <v-col cols="6">
+                <v-text-field
+                  v-model="hall.height"
+                  type="number"
+                  label="Hall Height"
+                  outlined
+                  hint="in cm"
+                ></v-text-field>
+            </v-col>
+            <v-col cols="6">
+                <v-text-field
+                  v-model="hall.tableWidth"
+                  type="number"
+                  label="Table Width"
+                  outlined
+                  hint="in cm"
+                ></v-text-field>              
+            </v-col>
+            <v-col cols="6">
+                <v-text-field
+                  v-model="hall.tableHeight"
+                  type="number"
+                  label="Table Height"
+                  outlined
+                  hint="in cm"
+                ></v-text-field>
+            </v-col>
+          </v-row>            
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+    <v-dialog
+      v-model="dialogSave"
+      max-width="600"
+      style="overflow:hidden"
+    >
+      <v-card>
+        <v-card-title class="text-h5">
+          getVHall
+          <v-spacer></v-spacer>
+          <v-btn float icon>
+            <v-icon color="success">mdi-content-save</v-icon>
+          </v-btn>
+          <v-btn float icon @click="dialogSave=false">
+            <v-icon color="info">mdi-close</v-icon>
+          </v-btn>            
+        </v-card-title>
+        <v-divider></v-divider>
+        <v-card-text class="mt-3">
+          {{JSON.stringify(this.virtualHallJSON)}}
+        </v-card-text>
+      </v-card>
+    </v-dialog> 
+	</div>
 </template>
 
 <script>
-
-
   import Square from "./Square";
+  import {DIRECTION} from "./Constant";
+
   export default {
     name: 'CanvasHall',
     methods:{
@@ -91,8 +346,11 @@
         }
       },
       cursorInRect(mouseX, mouseY, rectX, rectY, rectW, rectH) {
-        let xLine = mouseX > rectX && mouseX < rectX + rectW
-        let yLine = mouseY > rectY && mouseY < rectY + rectH
+        let x = rectX + this.camera.x;
+        let y = rectY + this.camera.y;
+
+        let xLine = mouseX > x && mouseX < x + rectW
+        let yLine = mouseY > y && mouseY < y + rectH
 
         return xLine && yLine
       },
@@ -132,28 +390,7 @@
         //let mouse = getMouseCoords(canvas,this)
         console.log(41, e, mouse,this.dragTL,this.dragTR,this.dragBL,this.dragBR,this.mouseX,this.mouseY)
       },
-      drawHandles(ctx, x, y, w, h,color = "red", sh) {
-          ctx.save()
-          ctx.translate(x, y)
-          ctx.fillStyle = color
-          switch(sh)
-            {
-              case 'rect':
-                ctx.fillRect(-10, -10, 15, 15)
-                ctx.fillRect(w-5, h-5, 15, 15)
-                ctx.fillRect(w-5, -10, 15, 15)
-                ctx.fillRect(-10, h-5, 15, 15)
-              break;
-              case 'round':
-                ctx.fillRect(-10, (w/2-10), 15, 15)
-                ctx.fillRect(h-5,(w-15)/2, 15, 15)
-                ctx.fillRect((h/2-10),-10, 15, 15)
-                ctx.fillRect((h/2-10),h-5, 15, 15)
-              break;
-            }
-          ctx.restore()
-          //ctx.fillText(Math.floor(x), -30, 0)
-      },
+
       drawBG (context){
           context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           context.scale(this.zoomLevel, this.zoomLevel);
@@ -194,10 +431,10 @@
 
           context.beginPath()
           for (let i = 50; i < this.w / this.zoomLevel; i += 10) {
-              if (i % 50 === 0) {
+              if ((i - this.camera.x) % 50 === 0) {
                   context.moveTo(i, 0)
                   context.lineTo(i, 30)
-                  context.fillText(` ${i}`, i, 30)
+                  context.fillText(` ${i - this.camera.x}`, i, 30)
               } else {
                   context.moveTo(i, 0)
                   context.lineTo(i, 10)
@@ -208,11 +445,11 @@
           context.stroke()
 
           context.beginPath()
-          for (let i = 50; i < this.h / this.zoomLevel; i += 10) {
-              if (i % 50 === 0) {
+          for (let i = 50 ; i < this.h / this.zoomLevel; i += 10) {
+              if ((i - this.camera.y) % 50 === 0) {
                   context.moveTo(0, i)
                   context.lineTo(30, i)
-                  context.fillText(` ${i}`, 30, i)
+                  context.fillText(` ${i - this.camera.y}`, 30, i)
               } else {
                   context.moveTo(0, i)
                   context.lineTo(10, i)
@@ -228,8 +465,8 @@
       getMouseCoords(canvas, event) {
         let canvasCoords = canvas.getBoundingClientRect()
         return {
-            x: (event.pageX - canvasCoords.left) / this.zoomLevel,
-            y: (event.pageY - canvasCoords.top) / this.zoomLevel
+            x: (event.clientX - canvasCoords.left) / this.zoomLevel,
+            y: (event.clientY - canvasCoords.top) / this.zoomLevel
         }
       },
       getIt(type = '') {
@@ -314,8 +551,8 @@
           json['tableId'] = id;
           json['tableName'] = name;
           json['shape'] = type;
-          json['x'] = (event.pageX - canvasCoords.left) / this.zoomLevel;
-          json['y'] = (event.pageY - canvasCoords.top) / this.zoomLevel;
+          json['x'] = (Math.round((event.clientX - canvasCoords.left) / 10) * 10) / this.zoomLevel;
+          json['y'] = (Math.round((event.clientY - canvasCoords.top) / 10) * 10) / this.zoomLevel;
 
           let newPrtcls = new Square(json);
           this.prtcls.push(newPrtcls)
@@ -341,7 +578,17 @@
         console.log("Virtual Hall Json Data :  ", this.virtualHallJSON)
       },
 
-      SetRotate() {
+      isHandleAnchor() {
+        let isAnchor = false;
+        this.prtcls.forEach(e => {
+          if(e.resize) {
+            isAnchor = true;
+          }
+        })
+        return isAnchor;
+      },
+
+      SetCamera() {
         this.isRotate = !this.isRotate;
       },
 
@@ -406,16 +653,414 @@
           this.ctx.fillStyle = 'white'
           this.prtcls.forEach(e => {
               e.select = true
+              e.camera = {...this.camera};
               e.draw(this.ctx)
+              if(e.resize) {
+                this.drawDragAnchor(e.x, e.y, e.w, e.h, e.angle);
+              }
           })
           this.ctx.setTransform(1, 0, 0, 1, 0, 0);
           window.requestAnimationFrame(this.animate)
+      },
+
+      handleSelect(e) {
+        let mouse = this.getMouseCoords(this.canvas, e);
+        this.prtcls.forEach(e => {
+          if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h)) {
+              e.resize = true
+          } else {
+              e.resize = false
+          }
+        })
+
+      },
+
+      handleRotate(){
+        console.log("----set rotate")
+
+        this.isRotate = true;
+      },
+
+      handleAnchors(event){
+        if(event.toElement != undefined) {
+          this.scale_direction = event.toElement.className.replace("-anchor anchor", "");
+        } else {
+          this.scale_direction = event.currentTarget.className.replace("-anchor anchor", "");
+        }
+
+        console.log("----set direction", this.scale_direction)
+        this.isScale = true;
+      },
+
+      drawSelection(){
+        let w = 200;
+        let h = 100
+        const rect = this.canvas.getBoundingClientRect();
+        const left = rect.left;
+        const top = rect.top;
+
+        this.selDivStyle.imgWidth = w;
+        this.selDivStyle.imgHeight = h;
+        this.selDivStyle.hW = w / 2;
+        this.selDivStyle.hH = h / 2;
+        this.selDivStyle.fX = this.camera.x + w + left + this.selDivStyle.hW;
+        this.selDivStyle.fY = this.camera.y + h + top + this.selDivStyle.hH;
+
+        console.log(this.canvas, this.canvas.top)
+        console.log(this.selDivStyle.fX, this.selDivStyle.fY)
+        // Calculate imgAngle based on your requirements
+        this.selDivStyle.imgAngle = Math.PI / 4; // Example angle of 45 degrees
+
+        // //Position
+        // $(".line-h, .line-v, .rotation-center, #preview").css("left", fX+"px").css("top", fY+"px").show();
+
+        // $(".line-h").width(img.width).css("margin", "0 0 0 -"+hW+"px");
+        // $(".line-v").height(img.height).css("margin", "-"+hH+"px 0 0 0");
+        // $("#jq-preview").width(img.width).height(img.height).css("margin", "-"+hH+"px 0 0 -"+hW+"px"); 
+
+        // $(".top-line").css("transform", "rotate("+img.angle+"rad) translate(0, -"+(hH+2)+"px)");
+        // $(".bottom-line").css("transform", "rotate("+img.angle+"rad) translate(0, "+hH+"px)");
+        // $(".right-line").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, 0)");
+        // $(".left-line").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+2)+"px, 0)");
+      },
+
+      drawDragAnchor(x, y, w, h, angle){
+
+        const rect = this.canvas.getBoundingClientRect();
+        const left = rect.left;
+        const top = rect.top;
+
+        w = w * this.zoomLevel;
+        h = h * this.zoomLevel
+
+        this.selDivStyle.imgWidth = w;
+        this.selDivStyle.imgHeight = h;
+        this.selDivStyle.hW = w / 2;
+        this.selDivStyle.hH = h / 2;
+        this.selDivStyle.fX = ( this.camera.x + x ) * this.zoomLevel + this.selDivStyle.hW + left;
+        this.selDivStyle.fY = ( this.camera.y + y ) * this.zoomLevel + this.selDivStyle.hH  + top;
+
+        // Calculate imgAngle based on your requirements
+        this.selDivStyle.imgAngle = angle; // Example angle of 45 degrees
+
+        // Position
+        // $(".anchor, .rotate").css("left", fX+"px").css("top", fY+"px").show();
+        // // Line Transform
+        // $(".top-anchor").css("transform", "rotate("+img.angle+"rad) translate(0, -"+hH+"px)");
+        // $(".bottom-anchor").css("transform", "rotate("+img.angle+"rad) translate(0, "+hH+"px)");
+        // $(".right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, 0)");
+        // $(".left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, 0)");
+
+        // // Anchor Transform
+        // $(".top-left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, -"+hH+"px)");
+        // $(".top-right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, -"+hH+"px)");
+        // $(".bottom-left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, "+hH+"px)");
+        // $(".bottom-right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, "+hH+"px)");
+
+        // // Rotate Transform
+        // $(".top-left-rotate").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+18)+"px, -"+(hH+18)+"px)");
+        // $(".top-right-rotate").css("transform", "rotate("+img.angle+"rad) translate("+(hW+18)+"px, -"+(hH+18)+"px)");
+        // $(".bottom-left-rotate").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+18)+"px, "+(hH+18)+"px)");
+        // $(".bottom-right-rotate").css("transform", "rotate("+img.angle+"rad) translate("+(hW+18)+"px, "+(hH+18)+"px)");
+
+      },
+
+      rotate(e, mouse){
+
+        var imageCenterX = e.x + (e.w / 2);
+        var imageCenterY = e.y + (e.h / 2);
+
+        var a = { x: mouse.x, y: mouse.y };
+        var b = { x: imageCenterX, y: imageCenterY };
+        var c = { x: this.startPos.x, y: this.startPos.y };
+
+        var dir = this.ccw(a, b, c);
+
+        var radians = this.getAngle(a, b, c);
+
+        let diff = Math.PI / 18;
+
+        radians = Math.round(radians / diff) * diff;
+
+        e.angle = dir == -1 ? -radians + this.startPos.originAngle : radians + this.startPos.originAngle;
+
+        
+      },
+      
+      scale(e, diff){
+		
+        let dx = diff.x;
+        let dy = diff.y;
+
+        // var xs = dx * dx;
+        // var ys = dy * dy;		 
+        // var distance =  Math.sqrt( xs + ys );
+
+          if(this.scale_direction == DIRECTION.RIGHT){
+            e.w = this.startPos.originW + dx;
+          }
+          if(this.scale_direction == DIRECTION.LEFT){
+            e.w = this.startPos.originW - dx;
+            e.x = this.startPos.x + dx - this.camera.x;
+          }
+          if(this.scale_direction == DIRECTION.BOTTOM){
+            e.h = this.startPos.originH + dy;
+          }
+          if(this.scale_direction == DIRECTION.TOP){
+            e.h = this.startPos.originH - dy;
+            e.y = this.startPos.y + dy - this.camera.y;
+          }
+          // if(this.scale_direction == "top-left"){
+          //   img.height += -dy;
+          //   img.top += dy;
+          //   img.width += -dx;
+          //   img.left += dx;	
+          // }
+          // if(this.scale_direction == "top-right"){
+          //   img.height += -dy;
+          //   img.top += dy;
+          //   img.width += dx;
+          // }
+          // if(this.scale_direction == "bottom-right"){
+          //   img.height += dy;
+          //   img.width += dx;
+          // }
+          // if(this.scale_direction == "bottom-left"){
+          //   img.height += dy;
+          //   img.width += -dx;
+          //   img.left += dx;				
+          // }
+
+      },
+
+      getAngle(a, b, c){
+        var AB = Math.sqrt(Math.pow(b.x-a.x,2)+ Math.pow(b.y-a.y,2));    
+        var BC = Math.sqrt(Math.pow(b.x-c.x,2)+ Math.pow(b.y-c.y,2)); 
+        var AC = Math.sqrt(Math.pow(c.x-a.x,2)+ Math.pow(c.y-a.y,2));
+        return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB));
+      },
+
+      ccw(a, b, c) {
+        var area2 = (b.x - a.x)*(c.y - a.y) - (b.y - a.y)*(c.x - a.x);
+        if (area2 < 0) return -1;
+        if (area2 > 0) return +1;
+        return 0;
+      },
+
+      detectDoubleTap(event) {
+        const curTime = new Date().getTime();
+        const tapLen = curTime - this.lastTap;
+
+        if (tapLen < 500 && tapLen > 0) {
+          // Double tap detected
+
+          this.handleSelect(event);
+
+          console.log('Double tapped!');
+        } else {
+          // Not a double tap, start a timer
+          this.timeout = setTimeout(() => {
+            clearTimeout(this.timeout);
+          }, 500);
+        }
+
+        this.lastTap = curTime;
+      },
+
+      handleMouseMove(e) {
+        let diff = {
+              x : Math.round((e.clientX - this.startPos.x) / 10) * 10,
+              y : Math.round((e.clientY - this.startPos.y) / 10) * 10,
+          };
+          if(e.which == 2) {
+            this.camera.x = this.startPos.originX + diff.x;
+            this.camera.y = this.startPos.originY + diff.y;
+            this.camera.x = Math.min(0, this.camera.x);
+            this.camera.y = Math.min(0, this.camera.y);
+            this.drawBG(this.ctx2)
+          } else {
+              let mouse = this.getMouseCoords(this.canvas, e)
+
+              let arr = this.prtcls.map(e => this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h))
+              !arr.every(e => e === false) ? this.canvas.classList.add('pointer') : this.canvas.classList.remove('pointer')
+
+              this.prtcls.forEach(e => {
+                  if (e.selected) {
+                      let newX = Math.round((mouse.x - e.offset.x)/10)*10
+                      let newY = Math.round((mouse.y - e.offset.y)/10)*10
+                      if(e.resize && (this.isScale || this.isRotate)) {
+                          let diff = {
+                              x : Math.round((mouse.x - this.startPos.x) / this.setting.diff) * this.setting.diff,
+                              y : Math.round((mouse.y - this.startPos.y) / this.setting.diff) * this.setting.diff,
+                          }
+
+                          if(this.isRotate) {
+                            this.rotate(e, mouse)
+                            // e.angle = this.startPos.originAngle + Math.PI / 18 * diff.x/10;
+
+                          } else {
+
+                            diff.x = e.expandX? diff.x : 0;
+                            diff.y = e.expandY? diff.y : 0;
+
+                            if(e.lockRatio) {
+                                diff.y = diff.x * (e.h / e.w);
+                            }
+
+                            this.scale(e, diff)
+
+                            e.w = Math.max(10, e.w)
+                            e.h = Math.max(10, e.h)
+
+                            // if(this.scale_direction == DIRECTION.LEFT) {
+                            //     e.w = this.startPos.originW - diff.x;
+                            //     // e.h = this.startPos.originH + diff.y;
+                            //     e.x = this.startPos.x + diff.x
+
+
+                            // } else {
+                            //   if(e.shape == 'round') {
+                            //     e.w = this.startPos.originW + diff.x;
+                            //     e.h = this.startPos.originH + diff.x;
+                            //   } else {
+                            //       e.w = this.startPos.originW + diff.x;
+                            //       e.h = this.startPos.originH + diff.y;
+                            //   }
+              
+                            //   e.w = Math.max(10, e.w)
+                            //   e.h = Math.max(10, e.h)
+                            // }
+
+
+
+                          }
+
+
+                      } else {
+                          e.x = newX
+                          e.y = newY
+                      }
+                  }
+                  this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h) ?
+                      e.active != true ? e.activate() : false
+                      : e.active = false
+              })
+          }
+      },
+
+      handleMouseDown(e) {
+        console.log("is SCALE: ", this.isScale, " ROTATE: ", this.isRotate)
+        if(e.which == 2) {
+            console.log("camera move---")
+            this.canvas.classList.add('hand');
+            this.startPos = {
+                  x : e.clientX,
+                  y : e.clientY,
+                  originX: this.camera.x,
+                  originY: this.camera.y
+              }
+          } else {
+            let mouse = this.getMouseCoords(this.canvas, e)
+            this.prtcls.forEach(e => {
+              if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h)) {
+                  e.selected = true
+                  e.offset = this.getOffsetCoords(mouse, e)
+                  if(e.resize) {
+                      this.startPos = {
+                          x : mouse.x,
+                          y : mouse.y,
+                          originW : e.w,
+                          originH : e.h,
+                          originAngle : e.angle
+                      }
+                      e.rotate = this.isRotate;
+                  } else {
+                    e.rotate = false;
+                  }
+              } else if ((this.isScale || this.isRotate) && e.resize) {
+                console.log("_____seeleect div")
+                  e.selected = true
+                  e.offset = this.getOffsetCoords(mouse, e)
+                  this.startPos = {
+                      x : mouse.x,
+                      y : mouse.y,
+                      originW : e.w,
+                      originH : e.h,
+                      originAngle : e.angle
+                  }
+                  e.rotate = this.isRotate;
+              } else {
+                  e.selected = false
+              }
+            })
+          }
+      },
+
+      handleMouseUp(e) {
+        console.log("touch up")
+        if(e.which == 2) {
+          this.canvas.classList.remove('hand')
+        } else {
+          this.prtcls.forEach(e => {
+            e.selected = false
+          })
+        }
+        this.isScale = false;
+        this.isRotate = false;
+      },
+
+      handleTouchStart(event) {
+        const touchPoints = Array.from(event.touches);
+        if (touchPoints.length === 2) {
+          // Calculate the initial distance between two touch points
+          const dx = touchPoints[0].clientX - touchPoints[1].clientX;
+          const dy = touchPoints[0].clientY - touchPoints[1].clientY;
+          this.pinchStartDistance = Math.sqrt(dx * dx + dy * dy);
+          this.initialZoom = 1;
+        }
+      },
+
+      handleTouchMove(event) {
+        const touchPoints = Array.from(event.touches);
+        if (touchPoints.length === 2) {
+          // Calculate the current distance between two touch points
+          const dx = touchPoints[0].clientX - touchPoints[1].clientX;
+          const dy = touchPoints[0].clientY - touchPoints[1].clientY;
+          const pinchCurrentDistance = Math.sqrt(dx * dx + dy * dy);
+
+          // Calculate the zoom factor based on the pinch distance change
+          const zoomFactor = pinchCurrentDistance / this.pinchStartDistance;
+
+
+          const zoomSpeed = 0.1; // Adjust this value to control the zoom speed
+          this.zoomLevel -= (zoomFactor > this.initialZoom ? 1 : -1) * zoomSpeed;
+          this.zoomLevel = Math.max(0.5, Math.min(this.zoomLevel, 8));
+          // Perform the zoom action based on the zoom factor
+          if (zoomFactor > this.initialZoom) {
+            // Zoom in
+            console.log('Zoom in');
+          } else {
+            // Zoom out
+            console.log('Zoom out');
+          }
+          this.drawBG(this.ctx2)
+
+
+          // Update the initial zoom for the next touch move event
+          this.initialZoom = zoomFactor;
+        }
       }
+
+
     },
 
     data() {
       return {
-        hsl: (h, s, l) => `hsl(${h},${s}%,${l}%)`,
+        dialogSave:false,
+        dialogNew:false,
+        hall:{},
+        activeVHall:null,
+		
         closeEnough: 10,
         dragTL: false,
         dragBL: false,
@@ -424,7 +1069,8 @@
         drag: false,
         mouseX: null,
         mouseY: null,
-        widthPercent: 0.7,
+        widthPercent: 0.8,
+        heightPercent: 0.8,
         zoomLevel: 1,
         prtcls: [],
         startPos: {},
@@ -441,8 +1087,26 @@
         setting: {
           diff: 10
         },
-
+        isCameraMove: false,
         isRotate: false,
+        isScale: false,
+        scale_direction: DIRECTION.LEFT,
+
+        lastTap : 0,
+        timeout : null,
+        pinchStartDistance : 0,
+        initialZoom : 1,
+
+        selDivStyle: { 
+          imageUrl: 'path/to/image.jpg',
+          imgWidth: 0,
+          imgHeight: 0,
+          imgAngle: 0,
+          hW: 0,
+          hH: 0,
+          fX: 0,
+          fY: 0,
+        },
 
         defaultParelData: {
           "active":true,
@@ -450,7 +1114,7 @@
           "tableName": "--",
           "width": 80,
           "height": 80,
-          "shape": "rect",
+          "shape": "roundRect",
           "expandX": true,
           "expandY": true,
           "lockRatio": false,
@@ -484,7 +1148,7 @@
                       "name": "I11",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -500,7 +1164,7 @@
                       "name": "I21",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -516,7 +1180,7 @@
                       "name": "I31",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -532,7 +1196,7 @@
                       "name": "B1",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -548,7 +1212,7 @@
                       "name": "B2",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -564,7 +1228,7 @@
                       "name": "I2",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -580,7 +1244,7 @@
                       "name": "I13",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -596,7 +1260,7 @@
                       "name": "I23",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -612,7 +1276,7 @@
                       "name": "B3",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -628,7 +1292,7 @@
                       "name": "B4",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -644,7 +1308,7 @@
                       "name": "I3",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -660,7 +1324,7 @@
                       "name": "B5",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -676,7 +1340,7 @@
                       "name": "B6",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -692,7 +1356,7 @@
                       "name": "I4",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -708,7 +1372,7 @@
                       "name": "I14",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -724,7 +1388,7 @@
                       "name": "I24",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -740,7 +1404,7 @@
                       "name": "I34",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -756,7 +1420,7 @@
                       "name": "I5",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -772,7 +1436,7 @@
                       "name": "I15",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -788,7 +1452,7 @@
                       "name": "I25",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -804,7 +1468,7 @@
                       "name": "I35",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -820,7 +1484,7 @@
                       "name": "I6",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -836,7 +1500,7 @@
                       "name": "I16",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -852,7 +1516,7 @@
                       "name": "I26",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -868,7 +1532,7 @@
                       "name": "I36",
                       "width": 80,
                       "height": 80,
-                      "shape": "rect",
+                      "shape": "roundRect",
                       "expandX": true,
                       "expandY": true,
                       "lockRatio": false,
@@ -888,6 +1552,7 @@
                   "expandY": false,
                   "lockRatio": false,
                   "repeatable": true,
+                  "icon":"mdi-wall",
                   "url": "https://jslab.it/shapes/wall.svg"
               },
               {
@@ -900,6 +1565,7 @@
                   "expandY": false,
                   "lockRatio": false,
                   "repeatable": true,
+                  "icon":"mdi-window-closed-variant",
                   "url": "https://jslab.it/shapes/window.svg"
               },
               {
@@ -912,6 +1578,7 @@
                   "expandY": false,
                   "lockRatio": false,
                   "repeatable": true,
+                  "icon":"mdi-view-grid-plus",
                   "url": "https://jslab.it/shapes/corner.svg"
               },
               {
@@ -924,6 +1591,7 @@
                   "expandY": false,
                   "lockRatio": false,
                   "repeatable": true,
+                  "icon":"mdi-door",
                   "url": "https://jslab.it/shapes/door.svg"
               },
               {
@@ -936,6 +1604,7 @@
                   "expandY": false,
                   "lockRatio": false,
                   "repeatable": true,
+                  "icon":"mdi-door-sliding",
                   "url": "https://jslab.it/shapes/double_door.svg"
               }
         ],
@@ -943,118 +1612,18 @@
           {
             "virtualHallId": "AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
             "virtualHallName": "Hall 1",
-            "tables": [
-              {
-                "active":true,
-                "tableId": "AC892C8C9C5477FFE53F2A2AADB2CB11989A874E",
-                "tableName": "I1",
-                "width": 80,
-                "height": 80,
-                "shape": "octagonal",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": true,
-                "x": 600,
-                "y": 100
-              },
-              {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "roundRect",
-                        "expandX": false,
-                        "expandY": true,
-                        "lockRatio": false,
-                "x": 720,
-                "y": 100
-              },		
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "roundRect",
-                        "expandX": true,
-                        "expandY": false,
-                        "lockRatio": false,
-                "x": 520,
-                "y": 100
-              },	
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "image",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": false,
-                        "url": "https://jslab.it/shapes/corner.svg",
-                "x": 80,
-                "y": 80
-              },	
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "image",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": false,
-                        "url": "https://jslab.it/shapes/door.svg",
-                "x": 180,
-                "y": 180
-              },		
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "image",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": false,
-                        "url": "https://jslab.it/shapes/double_door.svg",
-                "x": 280,
-                "y": 180
-              },		
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "image",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": false,
-                        "url": "https://jslab.it/shapes/wall.svg",
-                "x": 180,
-                "y": 280
-              },		
-                    {
-                "active":true,
-                "tableId": "98BE6476E12A82D9441A4C47B7C895DEE0FA7C06",
-                "tableName": "I2",
-                "width": 80,
-                "height": 80,
-                "shape": "image",
-                        "expandX": true,
-                        "expandY": true,
-                        "lockRatio": false,
-                        "url": "https://jslab.it/shapes/window.svg",
-                "x": 180,
-                "y": 380
-              },		
-            ]
-          }
+            "tables": []
+          },
+          {
+            "virtualHallId": "7F2F86B2830E0A7B1ABC18D0B04363EF8466AA65",
+            "virtualHallName": "Hall 2",
+            "tables": []
+          },
+          {
+            "virtualHallId": "70880A8B56A60B22965F3A67F8C395E0D0B9D3C3",
+            "virtualHallName": "Hall 3",
+            "tables": []
+          }                    
         ]
 
       }
@@ -1066,7 +1635,7 @@
       this.ctx = this.canvas.getContext('2d')
       this.ctx2 = this.canvas2.getContext('2d')
       this.w = this.canvas.width = this.canvas2.width = window.innerWidth * this.widthPercent;
-      this.h = this.canvas.height = this.canvas2.height = window.innerHeight * 0.9;
+      this.h = this.canvas.height = this.canvas2.height = window.innerHeight * this.heightPercent;
 
       this.canvas.style.backgroundColor = 'transparent'
       this.canvas2.style.backgroundColor = 'yellow'
@@ -1083,7 +1652,7 @@
 
       window.addEventListener('resize', () => {
             this.w = this.canvas.width = this.canvas2.width = window.innerWidth * this.widthPercent;
-            this.h = this.canvas.height = this.canvas2.height = window.innerHeight * 0.9;
+            this.h = this.canvas.height = this.canvas2.height = window.innerHeight * this.heightPercent;
             this.drawBG(this.ctx2)
       })
 
@@ -1093,127 +1662,75 @@
       })
 
       this.canvas.addEventListener('dblclick', e => {
-          let mouse = this.getMouseCoords(this.canvas, e);
-
-          this.prtcls.forEach(e => {
-              console.log(e.w)
-                if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h)) {
-                    e.resize = true
-                    e.offset = this.getOffsetCoords(mouse, e)
-                } else {
-                    e.resize = false
-                }
-            })
+        this.handleSelect(e);
 
       })
 
-      this.canvas.addEventListener('mousemove', e => {
+      window.addEventListener('mousemove', e => {
+        this.handleMouseMove(e);
+      })
+
+      window.addEventListener('mousedown', e => {
+        this.handleMouseDown(e);
+      })
+
+      window.addEventListener('mouseup', e => {
+        this.handleMouseUp(e);
+      })
+
+      window.addEventListener('touchstart', (event) => {
+        console.log("touch start")
+
+        this.detectDoubleTap(event.touches[0])
+
+        this.handleTouchStart(event);
+        // Check if there are at least two touch points
+        if (event.touches.length >= 2) {
+          this.canvas.classList.add('hand');
+          this.startPos = {
+            x : event.touches[0].clientX,
+            y : event.touches[0].clientY,
+            originX: this.camera.x,
+            originY: this.camera.y
+          }
+        }
+        
+        this.handleMouseDown(event.touches[0]);
+      });
+
+      // Add an event listener to the touchmove event
+      window.addEventListener('touchmove', (event) => {
+        console.log("touch move-----")
+
+        this.handleTouchMove(event);
+        // Check if there are at least two touch points
+        let e = event.touches[0];
+        if (event.touches.length >= 2) {       
+          console.log(e.clientX)   
           let diff = {
-              x : Math.round((e.pageX - this.startPos.x) / 10) * 10,
-              y : Math.round((e.pageY - this.startPos.y) / 10) * 10,
+              x : Math.round((e.clientX - this.startPos.x) / 10) * 10,
+              y : Math.round((e.clientY - this.startPos.y) / 10) * 10,
           };
-          if(e.which == 2) {
-            this.camera.x = this.startPos.originX + diff.x;
-            this.camera.y = this.startPos.originY + diff.y;
-            this.camera.x = Math.max(0, this.camera.x);
-            this.camera.y = Math.max(0, this.camera.y);
-            this.drawBG(this.ctx2)
-          } else {
-              let mouse = this.getMouseCoords(this.canvas, e)
+          // Handle the two-finger touch movement
+          this.camera.x = this.startPos.originX + diff.x;
+          this.camera.y = this.startPos.originY + diff.y;
+          this.camera.x = Math.min(0, this.camera.x);
+          this.camera.y = Math.min(0, this.camera.y);
+          this.drawBG(this.ctx2)
+        }
 
-              let arr = this.prtcls.map(e => this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h))
-              !arr.every(e => e === false) ? this.canvas.classList.add('pointer') : this.canvas.classList.remove('pointer')
-              this.prtcls.forEach(e => {
-                  if (e.selected) {
-                      let newX = Math.round((mouse.x - e.offset.x)/10)*10
-                      let newY = Math.round((mouse.y - e.offset.y)/10)*10
-                      if(e.resize) {
-                          let diff = {
-                              x : Math.round((mouse.x - e.startPos.x) / this.setting.diff) * this.setting.diff,
-                              y : Math.round((mouse.y - e.startPos.y) / this.setting.diff) * this.setting.diff,
-                          }
+        this.handleMouseMove(event.touches[0])
 
-                          if(this.isRotate) {
-
-                            e.angle = e.startPos.originAngle + Math.PI / 18 * diff.x/10;
-
-                          } else {
-
-                            diff.x = e.expandX? diff.x : 0;
-                            diff.y = e.expandY? diff.y : 0;
-
-                            if(e.lockRatio) {
-                                diff.y = diff.x * (e.h / e.w);
-                            }
-
-                            if(e.shape == 'round') {
-                                e.w = e.startPos.originW + diff.x;
-                                e.h = e.startPos.originH + diff.x;
-                            } else {
-                                e.w = e.startPos.originW + diff.x;
-                                e.h = e.startPos.originH + diff.y;
-                            }
-            
-                            e.w = Math.max(10, e.w)
-                            e.h = Math.max(10, e.h)
-
-                          }
+      });
 
 
-                      } else {
-                          e.x = newX
-                          e.y = newY
-                      }
-          
-                  }
-                  this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h) ?
-                      e.active != true ? e.activate() : false
-                      : e.active = false
-              })
-          }
-      })
 
-      this.canvas.addEventListener('mousedown', e => {
-          if(e.which == 2) {
-            this.canvas.classList.add('hand');
-            this.startPos = {
-                  x : e.pageX,
-                  y : e.pageY,
-                  originX: this.camera.x,
-                  originY: this.camera.y
-              }
-          } else {
-              let mouse = this.getMouseCoords(this.canvas, e)
-              this.prtcls.forEach(e => {
-                console.log(e.w)
-                  if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h)) {
-                      e.selected = true
-                      e.offset = this.getOffsetCoords(mouse, e)
-                      if(e.resize) {
-                          e.startPos = {
-                              x : mouse.x,
-                              y : mouse.y,
-                              originW : e.w,
-                              originH : e.h,
-                              originAngle : e.angle
-                          }
-                      }
-                  } else {
-                      e.selected = false
-                  }
-              })
-          }
-      })
+      
+      window.addEventListener('touchend', (event) => {
 
-      this.canvas.addEventListener('mouseup', e => {
-          console.log("camera : ", this.camera)
-          if(e.which == 2) {
-            this.canvas.classList.remove('hand')
-          } else {
-            this.prtcls.forEach(e => {
-                  e.selected = false
-              })
-          }
+
+        event.width = 1;
+        this.handleMouseUp(event);
       })
 
       this.canvas.addEventListener("contextmenu", e => {
@@ -1223,19 +1740,16 @@
 
       this.canvas.addEventListener('wheel', this.handleScroll);
 
+      // document.getElementsByClassName("rotate").addEventListener("mousedown", e => {
+      //   this.mouseDown(e)
+      // })
+
       this.initTables()
 
       this.animate()
-      // const initTables = () => {
-      //   let tableDiv = document.getElementById('tables-div');
-      //   tableDiv.innerHTML = this.tables.filter(t => t.virtualHallId == null).map((t, i) => `
-      //       <div id="${t.tableId}" name="${t.tableName}" type="${i != 1? 'rect' : 'round'}" class="card ${i != 1? '' : 'round'}" draggable="true" ondragstart="dragCard(event)">
-      //           <span>${t.tableName}</span>
-      //       </div>
-      //   `)
-      //   let json = this.virtualHallJSON[0]['tables'];
-      //   this.prtcls = new Array(json.length).fill().map((a,idx) => new Square(json[idx]))
-      // }
+
+      // this.drawSelection();
+
     },
 
     // Handle functions
@@ -1249,39 +1763,20 @@
     z-index: 10;
   }
 
-  .arch-container{
-    z-index: 10;
-    position: relative;
-    width: 80%;
-    /* height: 100%; */
-    display: flex;
-    align-content: flex-start;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-  }
 
   .arch-container img {
     width: 50px;
     height: 17px;
   }
 
-  .table-btn {
-    margin: 10px;
-  }
-
   .warp-container {
+    position: fixed;
     display: flex;
     justify-content: center;
     align-items: center;
   }
 
   .wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 5%;
-      height: 100vh;
       position: relative;
       z-index: 2;
   }
@@ -1289,15 +1784,9 @@
   .wrap div {
       box-shadow: 2px 2px 6px -2px rgba(0,0,0,0.75);
   }
-
   .wrap2 {
-      padding: 0 5%;
+
       position: absolute;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      top: 0;
       z-index: 1;
       background-color: 'white'
   }
@@ -1316,72 +1805,47 @@
       cursor: pointer;
   }
 
-  li.pass {
-      color: green
-  }
-
-  li.fail {
-      color: red
-  }
-
-  .tables {
-      width: 10%;
-      position: absolute;
-      top: 0px;
-      left: 0px;
-      z-index: 3;
-      /* display: flex;
-      justify-content: center;
-      align-items: center; */
-  }
-
   .hand {
-      cursor:move;
+      cursor: grab;
   }
 
-  .card {
-      margin: 10px;
-      width: 50px;
-      height: 50px;
-      background-color: rgb(179, 172, 172);
-      display: flex;
-      justify-content: center;
-      align-items: center;
+  /* Line */
+  .line-h{
+      position: fixed;
+      height: 0px;
   }
-
-  .control {
-      z-index: 3;
-      height: 100%;
-      width: 10%;
-      position: absolute;
-      top: 0px;
-      right: 0px;
-      // display: flex;
-      justify-content: center;
-      align-items: center;
+  .line-v{
+      position: fixed;
+      width: 0px;
   }
-
-  .control-btn{
-      z-index: 3;
-      height: 50%;
-      width: 10%;
-      margin: 10px;
-      // position: absolute;
-      // top: 0px;
-      // right: 0px;
-      // display: flex;
-      // justify-content: space-evenly;
-      // align-items: center;
-      // align-content: stretch;
-      // flex-direction: column-reverse;
-      // flex-wrap: nowrap;
+  .top-line{
+      border-top: dashed 2px #f700cb;
   }
-  button{
-      padding: 10px;
+  .bottom-line{
+      border-bottom: dashed 2px #f700cb;
   }
-
-  .round {
-      border-radius: 50%;
+  .right-line{
+      border-right: dashed 2px #f700cb;
   }
-
+  .left-line{
+      border-left: dashed 2px #f700cb;
+  }
+  /* Anchor */
+  .anchor{
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      margin: -20px 0 0 -20px;
+      background-color: #36313594;
+      opacity: 0.8;
+  }
+  /* Rotate */
+  .rotate{
+      position: fixed;
+      width: 40px;
+      height: 40px;
+      margin: -20px 0 0 -20px;
+      background-color: blue;
+      opacity: 0.5;
+  }
 </style>

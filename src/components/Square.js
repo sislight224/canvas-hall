@@ -1,3 +1,5 @@
+import TYPE from './Constant'
+
 export default class Square {
     constructor(j) {
         this.x = j.x
@@ -8,7 +10,7 @@ export default class Square {
         this.table=j.tableName     
         this.tableId=j.tableId
         this.angle = 0;
-             
+        
         this.bookings=j.bookings
         this.color = j.color
         this.lastName = j.lastName
@@ -40,41 +42,44 @@ export default class Square {
         context.save();
         // context.rotate(Math.PI / 18)
         context.fillStyle = this.bookings?this.bookings[0].color:'green'
-      
+        
+        let realX = this.x + this.camera.x;
+        let realY = this.y + this.camera.y;
+
         if (this.active || this.resize) {
             context.fillStyle = this.color;
             context.save()
             context.setLineDash([10, 5, 30, 5])
             context.beginPath()
-            context.moveTo(this.x, this.y)
-            context.lineTo(0, this.y)
-            context.moveTo(this.x, this.y)
-            context.lineTo(this.x, 0)
-            context.moveTo(this.x, this.y)
+            context.moveTo(realX, realY)
+            context.lineTo(0, realY)
+            context.moveTo(realX, realY)
+            context.lineTo(realX, 0)
+            context.moveTo(realX, realY)
             context.closePath()
             context.lineWidth = 0.5
             context.strokeStyle = this.activeColor
             context.stroke()
 
 
-            this.drawCoords(context, this.x, this.y, this.activeColor, this.w, this.h)
+            this.drawCoords(context, realX, realY, this.activeColor, this.w, this.h)
             
 
             context.restore()
         }
 
         context.save()
-        context.translate(this.x + this.w / 2, this.y + this.h / 2);
+        context.translate(realX + this.w / 2, realY + this.h / 2 );
         context.rotate(this.angle)
         context.beginPath();
 
         switch (this.shape)
         {
-            case 'rect':
+            case TYPE.RECT:
                 context.fillStyle = this.color;
                 context.fillRect(-this.w / 2, -this.h / 2, this.w, this.h)
                 break;
-            case 'image':
+            case TYPE.IMAGE:
                 if(this.isImg) {
                     context.save();
                     context.scale(this.flipX, this.flipY);
@@ -82,29 +87,33 @@ export default class Square {
                     context.restore();
                 }
                 break;
-            case 'roundRect':
+            case TYPE.ROUNDRECT:
                 this.drawRoundedRect(context, -this.w / 2, -this.h / 2, 10)
                 break;
-            case 'octagonal':
+            case TYPE.OCTAGON:
                 this.drawOctagon(context, 0 , 0 , this.w / 2)
                 break;
-            case 'round':
+            case TYPE.ROUND:
                 context.arc(0 , 0 , this.w / 2, 0, 2 * Math.PI, true);
                 context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
                 context.fill();
                 break;
-            case 'ecllipse':
+            case TYPE.ECLLIPSE:
                 context.ellipse(0 , 0 , this.w / 2, this.h / 2, 0, 0, 2 * Math.PI);
                 context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
                 context.fill();
                 break;
         }
-        context.font="20px Arial";
-        context.textAlign="center"; 
-        context.textBaseline = "middle";
-        context.fillStyle = "#ffffff";          
-        context.fillText(this.table, 0, 0); 
-        context.font="12px Arial";
+
+        if(this.shape != 'image') {
+            context.font="20px Arial";
+            context.textAlign="center"; 
+            context.textBaseline = "middle";
+            context.fillStyle = "#ffffff";          
+            context.fillText(this.table, 0, 0); 
+            context.font="12px Arial";
+        }
+
 
         if( this.bookings)
         {
@@ -120,8 +129,8 @@ export default class Square {
                 context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)
             }
         
-        if (this.active) {
-            // drawHandles(context, this.x, this.y, this.w, this.h, this.activeColor,this.shape);
+        if (this.active && this.rotate) {
+            this.drawHandles(context, realX, realY, this.w, this.h, this.activeColor, this.shape);
             //mouseDown(this);
         }
 
@@ -178,20 +187,48 @@ export default class Square {
 
     }
 
+    drawHandles(ctx, x, y, w, h,color = "red", sh) {
+        ctx.save()
+        ctx.translate(-w / 2, -h / 2)
+        ctx.fillStyle = color
+        switch(sh)
+          {
+            case TYPE.RECT:
+              ctx.fillRect(-10, -10, 15, 15)
+              ctx.fillRect(w-5, h-5, 15, 15)
+              ctx.fillRect(w-5, -10, 15, 15)
+              ctx.fillRect(-10, h-5, 15, 15)
+            break;
+            case TYPE.ROUND:
+              ctx.fillRect(-10, (w/2-10), 15, 15)
+              ctx.fillRect(h-5,(w-15)/2, 15, 15)
+              ctx.fillRect((h/2-10),-10, 15, 15)
+              ctx.fillRect((h/2-10),h-5, 15, 15)
+            break;
+            default:
+                ctx.fillRect(-10, -10, 15, 15)
+                ctx.fillRect(w-5, h-5, 15, 15)
+                ctx.fillRect(w-5, -10, 15, 15)
+                ctx.fillRect(-10, h-5, 15, 15)
+          }
+        ctx.restore()
+        //ctx.fillText(Math.floor(x), -30, 0)
+    }
+
     drawCoords = (ctx, x, y, color = "green", w, h) => {
         ctx.save()
         ctx.translate(x, y)
         ctx.fillStyle = color
         ctx.fillRect(-45, -7, 30, 14)
         ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(x), -30, 0)
+        ctx.fillText(Math.floor(x - this.camera.x), -30, 0)
     
         ctx.save()
         ctx.rotate(Math.PI / 2)
         ctx.fillStyle = color
         ctx.fillRect(-45, -7, 30, 14)
         ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(y), -30, 0)
+        ctx.fillText(Math.floor(y - this.camera.y), -30, 0)
         ctx.restore()
         
             ctx.save()
