@@ -51,6 +51,7 @@
           <v-btn class="mr-2 mb-2" color="info" dark @click="SetFlipY()"><v-icon>mdi-flip-vertical</v-icon></v-btn>
           <v-btn class="mr-2 mb-2" color="error" dark @click="DelTable"><v-icon>mdi-delete</v-icon></v-btn>
           <input type="color" class="btn" @change="SetColor">
+          <v-slider v-model="sliderValue" min="0" max="100" @change="handleSliderChange"></v-slider>
         </div>
         <v-divider></v-divider>
         <div class="text-left ml-7 mt-2 text-h5">Building Elements</div>
@@ -1022,6 +1023,7 @@
 
       handleTouchMove(event) {
         const touchPoints = Array.from(event.touches);
+        console.log("touch - length -----", touchPoints.length)
         if (touchPoints.length === 2) {
           // Calculate the current distance between two touch points
           const dx = touchPoints[0].clientX - touchPoints[1].clientX;
@@ -1049,9 +1051,14 @@
           // Update the initial zoom for the next touch move event
           this.initialZoom = zoomFactor;
         }
+      },
+
+      handleSliderChange(value) {
+        // Do something with the new value
+        console.log(value)
+        this.zoomLevel = 0.5 + 8.5 * value / 100;
+        this.drawBG(this.ctx2)
       }
-
-
     },
 
     data() {
