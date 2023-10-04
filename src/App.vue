@@ -1,19 +1,19 @@
 <template>
   <v-app>
     <v-main>
-      <CanvasHall/>
+      <CanvasHallData/>
     </v-main>
   </v-app>
 </template>
 
 <script>
-import CanvasHall from './components/CanvasHall';
+import CanvasHallData from './components/CanvasHallData/CanvasHallData.vue';
 
 export default {
   name: 'App',
 
   components: {
-    CanvasHall,
+    CanvasHallData,
   },
 
   data: () => ({

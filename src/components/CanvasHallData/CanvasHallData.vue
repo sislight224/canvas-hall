@@ -13,27 +13,6 @@
     </v-row> 
     <v-row class="text-center">
       <v-col cols="2">
-        <div class="table-container mt-5">
-          <div class="text-left ml-7 text-h5">Tables</div>
-          <v-btn 
-            v-for="(t, i) in tables"
-            :key="i"
-            :id="t.tableId"
-            :name="t.name"
-            :hall="t.hallId"
-            :type="t.shape"
-            :draggable="true"
-            class="ma-1"
-            :color="t.color"
-            :repeatable="t.repeatable?1:0"
-            :hidden="t.hidden == 1"
-            x-small
-            @dragstart="dragCard"
-          >
-            {{ t['name'] }}
-          </v-btn>
-        </div>
-        <v-divider></v-divider>
         <div class="text-left ml-7 mt-2 text-h5">Shapes</div>
         <div class="action-container ml-5 text-left">
           <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('rect')"><v-icon>mdi-square</v-icon></v-btn>
@@ -54,25 +33,7 @@
           <v-slider v-model="sliderValue" min="0" max="100" @change="handleSliderChange"></v-slider>
         </div>
         <v-divider></v-divider>
-        <div class="text-left ml-7 mt-2 text-h5">Building Elements</div>
-        <div class="arch-container ml-5 text-left">
-          <v-btn
-            v-for="(t, i) in archElements"
-            :key="i"
-            :id="t.elementId"
-            :name="t.elementName"
-            :hall="null"
-            :type="t.shape"
-            :draggable="true"
-            class="ma-2"
-            color="info"
-            :repeatable="t.repeatable?1:0"
-            @dragstart="dragCard"
-          >
-            <v-icon>{{t.icon}}</v-icon>
-            {{ t.elementName }}
-          </v-btn>
-        </div>
+
       </v-col>
       <v-col cols="10">
         <div class="warp-container">
@@ -90,40 +51,6 @@
           <div class="warp-container"
             v-if="isHandleAnchor()"
             :style="{ zIndex: 5 }">
-
-            <!-- <div class="top-line line-h"></div>
-            <div class="bottom-line line-h"></div>
-            <div class="left-line line-v"></div>
-            <div class="right-line line-v"></div> -->
-
-            <!-- <div class="top-line line-h" :style="{ 
-                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, -' + (selDivStyle.hH + 2) + 'px)',
-                width: selDivStyle.imgWidth + 'px', 
-                margin: '0 0 0 -' + selDivStyle.hW + 'px',
-                left: selDivStyle.fX + 'px',
-                top: selDivStyle.fY + 'px',
-              }"></div>
-            <div class="bottom-line line-h" :style="{ 
-                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(0, ' + selDivStyle.hH + 'px)',
-                width: selDivStyle.imgWidth + 'px', 
-                margin: '0 0 0 -' + selDivStyle.hW + 'px',
-                left: selDivStyle.fX + 'px',
-                top: selDivStyle.fY + 'px',
-              }"></div>
-            <div class="right-line line-v" :style="{ 
-                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(' + selDivStyle.hW + 'px, 0)',
-                height: selDivStyle.imgHeight + 'px', 
-                margin: '-' + selDivStyle.hH + 'px 0 0 0',
-                left: selDivStyle.fX + 'px',
-                top: selDivStyle.fY + 'px',
-              }"></div>
-            <div class="left-line line-v" :style="{ 
-                transform: 'rotate(' + selDivStyle.imgAngle + 'rad) translate(-' + (selDivStyle.hW + 2) + 'px, 0)',
-                height: selDivStyle.imgHeight + 'px', 
-                margin: '-' + selDivStyle.hH + 'px 0 0 0',
-                left: selDivStyle.fX + 'px',
-                top: selDivStyle.fY + 'px',
-              }"></div> -->
 
             <div class="top-anchor anchor"
               @mousedown="handleAnchors"
