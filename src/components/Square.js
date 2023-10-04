@@ -47,22 +47,24 @@ export default class Square {
         let realY = this.y + this.camera.y;
 
         if (this.active || this.resize) {
+            let rect = this.getRealMouseRect(realX, realY, this.w, this.h, this.angle)
+
             context.fillStyle = this.color;
             context.save()
             context.setLineDash([10, 5, 30, 5])
             context.beginPath()
-            context.moveTo(realX, realY)
-            context.lineTo(0, realY)
-            context.moveTo(realX, realY)
-            context.lineTo(realX, 0)
-            context.moveTo(realX, realY)
+            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
+            context.lineTo(0, rect.topEdgeY)
+            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
+            context.lineTo(rect.leftEdgeX, 0)
+            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
             context.closePath()
             context.lineWidth = 0.5
             context.strokeStyle = this.activeColor
             context.stroke()
 
 
-            this.drawCoords(context, realX, realY, this.activeColor, this.w, this.h)
+            this.drawCoords(context, realX, realY, this.activeColor, this.w, this.h, rect.leftEdgeX, rect.topEdgeY)
             
 
             context.restore()
@@ -92,6 +94,12 @@ export default class Square {
                 break;
             case TYPE.OCTAGON:
                 this.drawOctagon(context, 0 , 0 , this.w / 2)
+                break;
+            case TYPE.HEX:
+                this.drawExagonal(context, 0 , 0 , this.w / 2)
+                break;
+            case TYPE.TRIANGLE:
+                this.drawTriangle(context, 0 , 0 , this.w / 2)
                 break;
             case TYPE.ROUND:
                 context.arc(0 , 0 , this.w / 2, 0, 2 * Math.PI, true);
@@ -130,7 +138,7 @@ export default class Square {
             }
         
         if (this.active && this.rotate) {
-            this.drawHandles(context, realX, realY, this.w, this.h, this.activeColor, this.shape);
+            // this.drawHandles(context, realX, realY, this.w, this.h, this.activeColor, this.shape);
             //mouseDown(this);
         }
 
@@ -159,18 +167,46 @@ export default class Square {
     }
 
     drawOctagon(context, x, y, sideLength) {
-        // context.beginPath();
-        // context.moveTo(x + sideLength * Math.cos(0), y + sideLength * Math.sin(0));
-        // for (let i = 1; i <= 8; i++) {
-        //   const angle = i * (Math.PI / 4);
-        //   context.lineTo(x + sideLength * Math.cos(angle), y + sideLength * Math.sin(angle));
-        // }
-        // context.closePath();
-        // context.stroke();
-        // context.fillStyle = this.color;
-        // context.fill();
         let offset = 8
         let offsetAngle = 2 * Math.PI / 16;
+
+        sideLength *= 1.08
+
+        context.beginPath();
+        context.moveTo(x + sideLength * Math.cos(offsetAngle), y + sideLength * Math.sin(offsetAngle));
+
+
+        for (let side = 0; side <= offset; side++) {
+            context.lineTo(x + sideLength * Math.cos(offsetAngle + side * 2 * Math.PI / offset), y + sideLength * Math.sin(offsetAngle + side * 2 * Math.PI / offset));
+        }
+
+        context.fillStyle = this.color;
+        context.fill();
+
+    }
+    // Draw Exagonal
+    drawExagonal(context, x, y, sideLength) {
+        let offset = 6
+        let offsetAngle = 0;
+
+        sideLength *= 1.08
+
+        context.beginPath();
+        context.moveTo(x + sideLength * Math.cos(offsetAngle), y + sideLength * Math.sin(offsetAngle));
+
+
+        for (let side = 0; side <= offset; side++) {
+            context.lineTo(x + sideLength * Math.cos(offsetAngle + side * 2 * Math.PI / offset), y + sideLength * Math.sin(offsetAngle + side * 2 * Math.PI / offset));
+        }
+
+        context.fillStyle = this.color;
+        context.fill();
+
+    }
+    // Draw Triangle
+    drawTriangle(context, x, y, sideLength) {
+        let offset = 3
+        let offsetAngle = 0;
 
         sideLength *= 1.08
 
@@ -215,23 +251,27 @@ export default class Square {
         //ctx.fillText(Math.floor(x), -30, 0)
     }
 
-    drawCoords = (ctx, x, y, color = "green", w, h) => {
+    drawCoords = (ctx, x, y, color = "green", w, h, rX, rY) => {
         ctx.save()
-        ctx.translate(x, y)
+        ctx.translate(rX, rY)
         ctx.fillStyle = color
         ctx.fillRect(-45, -7, 30, 14)
         ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(x - this.camera.x), -30, 0)
+        ctx.fillText(Math.floor(rX - this.camera.x), -30, 0)
     
         ctx.save()
         ctx.rotate(Math.PI / 2)
         ctx.fillStyle = color
         ctx.fillRect(-45, -7, 30, 14)
         ctx.fillStyle = 'white'
-        ctx.fillText(Math.floor(y - this.camera.y), -30, 0)
+        ctx.fillText(Math.floor(rY - this.camera.y), -30, 0)
         ctx.restore()
         
+        ctx.restore();
+
             ctx.save()
+            ctx.translate(x, y)
+
             ctx.translate(w / 2, h / 2)
             ctx.rotate(this.angle)
             ctx.fillStyle = 'black'
@@ -249,6 +289,61 @@ export default class Square {
     
         ctx.restore()
     }
+
+    getRealMouseRect(x, y, width, height, rotation) {
+        // Define the rectangle properties
+        // const x = 200; // x-coordinate of the rectangle
+        // const y = 200; // y-coordinate of the rectangle
+        // const width = 100; // width of the rectangle
+        // const height = 50; // height of the rectangle
+        // const rotation = 45; // rotation angle in degrees
+
+        // Convert the rotation angle to radians
+        const angleInRadians = rotation;
+
+        // Calculate the center point of the rectangle
+        const centerX = x + width / 2;
+        const centerY = y + height / 2;
+
+        // Calculate the coordinates of the four corners
+        const topLeftX = Math.cos(angleInRadians) * (x - centerX) - Math.sin(angleInRadians) * (y - centerY) + centerX;
+        const topLeftY = Math.sin(angleInRadians) * (x - centerX) + Math.cos(angleInRadians) * (y - centerY) + centerY;
+
+        const topRightX = Math.cos(angleInRadians) * (x + width - centerX) - Math.sin(angleInRadians) * (y - centerY) + centerX;
+        const topRightY = Math.sin(angleInRadians) * (x + width - centerX) + Math.cos(angleInRadians) * (y - centerY) + centerY;
+
+        const bottomLeftX = Math.cos(angleInRadians) * (x - centerX) - Math.sin(angleInRadians) * (y + height - centerY) + centerX;
+        const bottomLeftY = Math.sin(angleInRadians) * (x - centerX) + Math.cos(angleInRadians) * (y + height - centerY) + centerY;
+
+        const bottomRightX = Math.cos(angleInRadians) * (x + width - centerX) - Math.sin(angleInRadians) * (y + height - centerY) + centerX;
+        const bottomRightY = Math.sin(angleInRadians) * (x + width - centerX) + Math.cos(angleInRadians) * (y + height - centerY) + centerY;
+
+        // Calculate the x and y coordinates of the edges
+        const leftEdgeXTemp = Math.min(topLeftX, bottomLeftX, topRightX, bottomRightX);
+        const rightEdgeXTemp = Math.max(topRightX, bottomRightX, topLeftX, bottomLeftX);
+        const topEdgeYTemp = Math.min(topLeftY, topRightY, bottomLeftY, bottomRightY);
+        const bottomEdgeYTemp = Math.max(bottomLeftY, bottomRightY, topLeftY, topRightY);
+
+        const leftEdgeX = Math.min(leftEdgeXTemp, rightEdgeXTemp);
+        const rightEdgeX = Math.max(leftEdgeXTemp, rightEdgeXTemp);
+        const topEdgeY = Math.min(topEdgeYTemp, bottomEdgeYTemp);
+        const bottomEdgeY = Math.max(topEdgeYTemp, bottomEdgeYTemp);
+
+        return {
+          topLeftX,
+          topLeftY,
+          topRightX,
+          topRightY,
+          bottomLeftX,
+          bottomLeftY,
+          bottomRightX,
+          bottomRightY,
+          leftEdgeX,
+          rightEdgeX,
+          topEdgeY,
+          bottomEdgeY,
+        }
+      }
 
     update() {
         this.x += 0.1

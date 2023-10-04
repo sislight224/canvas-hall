@@ -337,7 +337,7 @@
   import {DIRECTION} from "./Constant";
 
   export default {
-    name: 'CanvasHall',
+    name: 'CanvasHallData',
     methods:{
 
       getOffsetCoords(mouse, rect) {
