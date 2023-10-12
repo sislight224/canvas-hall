@@ -1,24 +1,46 @@
 import TYPE from './Constant'
 
+
+
+const framework7_font = new FontFace( 'framework7-icons',
+  'url(https://cdn.jsdelivr.net/gh/framework7io/framework7-icons@master/fonts/Framework7Icons-Regular.woff2)' );
+document.fonts.add( framework7_font );
+
+const material_font = new FontFace( 'material-icons',
+// pass the url to the file in CSS url() notation
+// 'url(https://cdn.jsdelivr.net/npm/@mdi/font/fonts/materialdesignicons-webfont.woff2?v=7.3.67)');
+'url(https://fonts.gstatic.com/s/materialicons/v48/flUhRq6tzZclQEJ-Vdg-IuiaDsNcIhQ8tQ.woff2)' );
+document.fonts.add( material_font ); // add it to the document's FontFaceSet
+
+
 export default class Square {
     constructor(j) {
-        this.x = j.x
-        this.y = j.y
+        this.x = j.xPos
+        this.y = j.yPos
         this.w = j.width
         this.h = j.height
         this.shape=j.shape
-        this.table=j.tableName     
+        this.table=j.name     
         this.tableId=j.tableId
         this.angle = 0;
-        
-        this.bookings=j.bookings
         this.color = j.color
-        this.lastName = j.lastName
+        this.url=j.url
+        
+        this.isBooking = true;
+        this.fullName = j.fullName
+        this.ETA = j.ETA;
+        this.ATA = j.ATA;
+        this.duration=j.duration
+        this.timeLeft=j.timeLeft
+        this.slice=j.slice
+        this.timeLeftIcon=j.timeLeftIcon
+        this.sliceColor=j.sliceColor
         this.covers=j.covers
         this.children=j.children
-        this.time=j.time
-        this.url=j.url
-        this.shift=0
+        this.requests=j.requests
+        this.foodStyles=j.foodStyles
+        this.reuse=j.reuse
+
         this.expandX = j.expandX
         this.expandY = j.expandY
         this.lockRatio = j.lockRatio
@@ -41,34 +63,34 @@ export default class Square {
     draw(context) {
         context.save();
         // context.rotate(Math.PI / 18)
-        context.fillStyle = this.bookings?this.bookings[0].color:'green'
+        context.fillStyle = 'green'
         
         let realX = this.x + this.camera.x;
         let realY = this.y + this.camera.y;
 
-        if (this.active || this.resize) {
-            let rect = this.getRealMouseRect(realX, realY, this.w, this.h, this.angle)
+        // if (this.active || this.resize) {
+        //     let rect = this.getRealMouseRect(realX, realY, this.w, this.h, this.angle)
 
-            context.fillStyle = this.color;
-            context.save()
-            context.setLineDash([10, 5, 30, 5])
-            context.beginPath()
-            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
-            context.lineTo(0, rect.topEdgeY)
-            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
-            context.lineTo(rect.leftEdgeX, 0)
-            context.moveTo(rect.leftEdgeX, rect.topEdgeY)
-            context.closePath()
-            context.lineWidth = 0.5
-            context.strokeStyle = this.activeColor
-            context.stroke()
+        //     context.fillStyle = this.color;
+        //     context.save()
+        //     context.setLineDash([10, 5, 30, 5])
+        //     context.beginPath()
+        //     context.moveTo(rect.leftEdgeX, rect.topEdgeY)
+        //     context.lineTo(0, rect.topEdgeY)
+        //     context.moveTo(rect.leftEdgeX, rect.topEdgeY)
+        //     context.lineTo(rect.leftEdgeX, 0)
+        //     context.moveTo(rect.leftEdgeX, rect.topEdgeY)
+        //     context.closePath()
+        //     context.lineWidth = 0.5
+        //     context.strokeStyle = this.activeColor
+        //     context.stroke()
 
 
-            this.drawCoords(context, realX, realY, this.activeColor, this.w, this.h, rect.leftEdgeX, rect.topEdgeY)
+        //     this.drawCoords(context, realX, realY, this.activeColor, this.w, this.h, rect.leftEdgeX, rect.topEdgeY)
             
 
-            context.restore()
-        }
+        //     context.restore()
+        // }
 
         context.save()
         context.translate(realX + this.w / 2, realY + this.h / 2 );
@@ -103,12 +125,12 @@ export default class Square {
                 break;
             case TYPE.ROUND:
                 context.arc(0 , 0 , this.w / 2, 0, 2 * Math.PI, true);
-                context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
+                context.fillStyle = this.color
                 context.fill();
                 break;
             case TYPE.ECLLIPSE:
                 context.ellipse(0 , 0 , this.w / 2, this.h / 2, 0, 0, 2 * Math.PI);
-                context.fillStyle = this.bookings? this.bookings[this.shift].color :'green'
+                context.fillStyle = this.color
                 context.fill();
                 break;
         }
@@ -118,24 +140,37 @@ export default class Square {
             context.textAlign="center"; 
             context.textBaseline = "middle";
             context.fillStyle = "#ffffff";          
-            context.fillText(this.table, 0, 0); 
+            context.fillText(this.table, 0, -this.h / 2 + 20); 
             context.font="12px Arial";
         }
 
 
-        if( this.bookings)
+        if(this.isBooking)
         {
-            //let booking=this.bookings[this.shift];
-            //context.fillText(booking.lastName,this.x+(this.w/2),this.y+(this.h/2));  
-            //context.font="12px Arial";
-            //context.fillText(booking.children?booking.covers + '+' + booking.children:booking.covers,this.x+(this.w/2),this.y+this.h-30); 
-            //context.fillText(booking.time,this.x+(this.w/2),this.y+this.h-10);     
+
+
+
+            context.fillStyle = "red";
+            context.fillRect(-this.w / 2, -10, this.w * (this.timeLeft / this.duration), 20);
+
+            context.save()
+            context.fillStyle = 'white';
+            context.font = '20px material-icons';
+            context.fillText("bluetooth_searching", -this.w / 2 + 15, 0);
+            context.restore();
+
+            context.fillStyle = "white";
+            context.fillText(this.fullName, 0, 0);  
+            context.font="12px Arial";
+            context.fillText(this.children?this.covers + '+' + this.children : this.covers, 0, this.h / 4); 
+            context.fillText(this.ETA, 0, this.h / 2 - 8);     
         }
-            if (this.selected || this.resize) {
-                context.lineWidth = 2;
-                context.strokeStyle = this.activeColor2
-                context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)
-            }
+
+        if (this.selected || this.resize) {
+            context.lineWidth = 2;
+            context.strokeStyle = this.activeColor2
+            context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)
+        }
         
         if (this.active && this.rotate) {
             // this.drawHandles(context, realX, realY, this.w, this.h, this.activeColor, this.shape);

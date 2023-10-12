@@ -51,7 +51,15 @@
           <v-btn class="mr-2 mb-2" color="info" dark @click="SetFlipY()"><v-icon>mdi-flip-vertical</v-icon></v-btn>
           <v-btn class="mr-2 mb-2" color="error" dark @click="DelTable"><v-icon>mdi-delete</v-icon></v-btn>
           <input type="color" class="btn" @change="SetColor">
-          <v-slider v-model="sliderValue" min="0" max="100" @change="handleSliderChange"></v-slider>
+          <v-slider min="0" max="100" @change="handleSliderChange"></v-slider>
+          <div class="input-group">
+            <v-span>Width</v-span>
+            <input v-model="inputW" type="number" class="canvas-size mr-2 mb-2" @change="handleCanvasWidth"/>
+          </div>
+          <div>
+            <v-span>Height</v-span>
+            <input v-model="inputH" type="number" class="canvas-size mr-2 mb-2" @change="handleCanvasHeight"/>
+          </div>
         </div>
         <v-divider></v-divider>
         <div class="text-left ml-7 mt-2 text-h5">Building Elements</div>
@@ -1062,7 +1070,6 @@
       },
 
       handleMouseUp(e) {
-        console.log("touch up")
         if(e.which == 2) {
           this.canvas.classList.remove('hand')
         } else {
@@ -1122,6 +1129,19 @@
         console.log(value)
         this.zoomLevel = 0.5 + 8.5 * value / 100;
         this.drawBG(this.ctx2)
+      },
+
+      handleCanvasWidth(value) {
+        let width = value.target.value;
+        this.zoomLevel = this.w / width;
+        this.inputH = Math.round(this.h / this.zoomLevel);
+        this.drawBG(this.ctx2)
+      },
+      handleCanvasHeight(value) {
+        let height = value.target.value;
+        this.zoomLevel = this.h / height;
+        this.inputW = Math.round(this.w / this.zoomLevel);
+        this.drawBG(this.ctx2)
       }
     },
 
@@ -1151,6 +1171,8 @@
         ctx2: null,
         w: 0,
         h: 0,
+        inputW : 0,
+        inputH : 0,
         camera: {
           x : 0,
           y : 0
@@ -1846,6 +1868,9 @@
     z-index: 10;
   }
 
+  .canvas-size {
+    border: solid linen 1px;
+  }
 
   .arch-container img {
     width: 50px;

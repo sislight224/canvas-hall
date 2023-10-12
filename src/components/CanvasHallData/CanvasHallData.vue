@@ -4,7 +4,7 @@
       <v-col cols="12">       
         <v-btn-toggle v-model="activeVHall" mandatory active-class="info white--text" class="d-inline mr-8">
           <template v-for="(h,hi) in virtualHallJSON">
-            <v-btn style="height:36px" :key="hi" dark :value="h">{{h.virtualHallName}}</v-btn>
+            <v-btn style="height:36px" :key="hi" dark :value="h" @click="setHallData(hi)">{{h.virtualHallName}}</v-btn>
           </template>
         </v-btn-toggle>
         <v-btn class="mr-2" color="info" dark @click.stop="dialogNew = true">New</v-btn>
@@ -13,6 +13,14 @@
     </v-row> 
     <v-row class="text-center">
       <v-col cols="2">
+
+        <div class="text-left ml-7 mt-2 text-h5">Hall Time</div>
+        <div class="action-container ml-5 text-left">
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setHallTime('19:00')">19:00</v-btn>
+          <v-btn class="mr-2 mb-2" color="info" dark @click="setHallTime('19:30')">19:30</v-btn>
+        </div>
+        <v-divider></v-divider>
+
         <div class="text-left ml-7 mt-2 text-h5">Shapes</div>
         <div class="action-container ml-5 text-left">
           <v-btn class="mr-2 mb-2" color="info" dark @click="setShape('rect')"><v-icon>mdi-square</v-icon></v-btn>
@@ -30,7 +38,7 @@
           <v-btn class="mr-2 mb-2" color="info" dark @click="SetFlipY()"><v-icon>mdi-flip-vertical</v-icon></v-btn>
           <v-btn class="mr-2 mb-2" color="error" dark @click="DelTable"><v-icon>mdi-delete</v-icon></v-btn>
           <input type="color" class="btn" @change="SetColor">
-          <v-slider v-model="sliderValue" min="0" max="100" @change="handleSliderChange"></v-slider>
+          <v-slider min="0" max="100" @change="handleSliderChange"></v-slider>
         </div>
         <v-divider></v-divider>
 
@@ -501,12 +509,7 @@
       allowDropCard(ev) {
           ev.preventDefault();
       },
-      dragCard(ev) {
-          ev.dataTransfer.setData("card", ev.target.id);
-          ev.dataTransfer.setData("cardName", ev.target.getAttribute('name'));
-          ev.dataTransfer.setData("cardType", ev.target.getAttribute('type'));
-          ev.dataTransfer.setData("repeatable", ev.target.getAttribute('repeatable'));
-      },
+
       dropCard(ev) {
           ev.preventDefault();
           let id = ev.dataTransfer.getData("card");
@@ -568,11 +571,11 @@
 
       isHandleAnchor() {
         let isAnchor = false;
-        this.prtcls.forEach(e => {
-          if(e.resize) {
-            isAnchor = true;
-          }
-        })
+        // this.prtcls.forEach(e => {
+        //   if(e.resize) {
+        //     isAnchor = true;
+        //   }
+        // })
         return isAnchor;
       },
 
@@ -622,15 +625,9 @@
         })
       },
 
-      initTables() {
-          // let tableDiv = document.getElementById('tables-div');
-          // tableDiv.innerHTML = this.tables.filter(t => t.virtualHallId == null).map((t, i) => `
-          //     <div id="${t.tableId}" name="${t.tableName}" type="${i != 1? 'rect' : 'round'}" class="card ${i != 1? '' : 'round'}" draggable="true" ondragstart="dragCard(event)">
-          //         <span>${t.tableName}</span>
-          //     </div>
-          // `)
+      initTables(hallIdx = 0) {
 
-          let json = this.virtualHallJSON[0]['tables'];
+          let json = this.virtualHallJSON[hallIdx]['tables'];
           this.prtcls = new Array(json.length).fill().map((a,idx) => new Square(json[idx]))
 
       },
@@ -654,13 +651,21 @@
 
       handleSelect(e) {
         let mouse = this.getMouseCoords(this.canvas, e);
+        let isSelect = false;
         this.prtcls.forEach(e => {
           if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle)) {
               e.resize = true
+              isSelect = true
           } else {
-              e.resize = false
+              // e.resize = false
           }
         })
+
+        if(!isSelect) {
+          this.prtcls.forEach(e => {
+              e.resize = false
+          })
+        }
 
       },
 
@@ -699,18 +704,6 @@
         console.log(this.selDivStyle.fX, this.selDivStyle.fY)
         // Calculate imgAngle based on your requirements
         this.selDivStyle.imgAngle = Math.PI / 4; // Example angle of 45 degrees
-
-        // //Position
-        // $(".line-h, .line-v, .rotation-center, #preview").css("left", fX+"px").css("top", fY+"px").show();
-
-        // $(".line-h").width(img.width).css("margin", "0 0 0 -"+hW+"px");
-        // $(".line-v").height(img.height).css("margin", "-"+hH+"px 0 0 0");
-        // $("#jq-preview").width(img.width).height(img.height).css("margin", "-"+hH+"px 0 0 -"+hW+"px"); 
-
-        // $(".top-line").css("transform", "rotate("+img.angle+"rad) translate(0, -"+(hH+2)+"px)");
-        // $(".bottom-line").css("transform", "rotate("+img.angle+"rad) translate(0, "+hH+"px)");
-        // $(".right-line").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, 0)");
-        // $(".left-line").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+2)+"px, 0)");
       },
 
       drawDragAnchor(x, y, w, h, angle){
@@ -731,27 +724,6 @@
 
         // Calculate imgAngle based on your requirements
         this.selDivStyle.imgAngle = angle; // Example angle of 45 degrees
-
-        // Position
-        // $(".anchor, .rotate").css("left", fX+"px").css("top", fY+"px").show();
-        // // Line Transform
-        // $(".top-anchor").css("transform", "rotate("+img.angle+"rad) translate(0, -"+hH+"px)");
-        // $(".bottom-anchor").css("transform", "rotate("+img.angle+"rad) translate(0, "+hH+"px)");
-        // $(".right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, 0)");
-        // $(".left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, 0)");
-
-        // // Anchor Transform
-        // $(".top-left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, -"+hH+"px)");
-        // $(".top-right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, -"+hH+"px)");
-        // $(".bottom-left-anchor").css("transform", "rotate("+img.angle+"rad) translate(-"+hW+"px, "+hH+"px)");
-        // $(".bottom-right-anchor").css("transform", "rotate("+img.angle+"rad) translate("+hW+"px, "+hH+"px)");
-
-        // // Rotate Transform
-        // $(".top-left-rotate").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+18)+"px, -"+(hH+18)+"px)");
-        // $(".top-right-rotate").css("transform", "rotate("+img.angle+"rad) translate("+(hW+18)+"px, -"+(hH+18)+"px)");
-        // $(".bottom-left-rotate").css("transform", "rotate("+img.angle+"rad) translate(-"+(hW+18)+"px, "+(hH+18)+"px)");
-        // $(".bottom-right-rotate").css("transform", "rotate("+img.angle+"rad) translate("+(hW+18)+"px, "+(hH+18)+"px)");
-
       },
 
       rotate(e, mouse){
@@ -772,7 +744,6 @@
         radians = Math.round(radians / diff) * diff;
 
         e.angle = dir == -1 ? -radians + this.startPos.originAngle : radians + this.startPos.originAngle;
-
         
       },
       
@@ -867,74 +838,75 @@
             this.camera.x = Math.min(0, this.camera.x);
             this.camera.y = Math.min(0, this.camera.y);
             this.drawBG(this.ctx2)
-          } else {
-              let mouse = this.getMouseCoords(this.canvas, e)
-
-              let arr = this.prtcls.map(e => this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle))
-              !arr.every(e => e === false) ? this.canvas.classList.add('pointer') : this.canvas.classList.remove('pointer')
-
-              this.prtcls.forEach(e => {
-                  if (e.selected) {
-                      let newX = Math.round((mouse.x - e.offset.x)/10)*10
-                      let newY = Math.round((mouse.y - e.offset.y)/10)*10
-                      if(e.resize && (this.isScale || this.isRotate)) {
-                          let diff = {
-                              x : Math.round((mouse.x - this.startPos.x) / this.setting.diff) * this.setting.diff,
-                              y : Math.round((mouse.y - this.startPos.y) / this.setting.diff) * this.setting.diff,
-                          }
-
-                          if(this.isRotate) {
-                            this.rotate(e, mouse)
-                            // e.angle = this.startPos.originAngle + Math.PI / 18 * diff.x/10;
-
-                          } else {
-
-                            diff.x = e.expandX? diff.x : 0;
-                            diff.y = e.expandY? diff.y : 0;
-
-                            if(e.lockRatio) {
-                                diff.y = diff.x * (e.h / e.w);
-                            }
-
-                            this.scale(e, diff)
-
-                            e.w = Math.max(10, e.w)
-                            e.h = Math.max(10, e.h)
-
-                            // if(this.scale_direction == DIRECTION.LEFT) {
-                            //     e.w = this.startPos.originW - diff.x;
-                            //     // e.h = this.startPos.originH + diff.y;
-                            //     e.x = this.startPos.x + diff.x
-
-
-                            // } else {
-                            //   if(e.shape == 'round') {
-                            //     e.w = this.startPos.originW + diff.x;
-                            //     e.h = this.startPos.originH + diff.x;
-                            //   } else {
-                            //       e.w = this.startPos.originW + diff.x;
-                            //       e.h = this.startPos.originH + diff.y;
-                            //   }
-              
-                            //   e.w = Math.max(10, e.w)
-                            //   e.h = Math.max(10, e.h)
-                            // }
-
-
-
-                          }
-
-
-                      } else {
-                          e.x = newX
-                          e.y = newY
-                      }
-                  }
-                  this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle) ?
-                      e.active != true ? e.activate() : false
-                      : e.active = false
-              })
           }
+          // } else {
+          //     let mouse = this.getMouseCoords(this.canvas, e)
+
+          //     let arr = this.prtcls.map(e => this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle))
+          //     !arr.every(e => e === false) ? this.canvas.classList.add('pointer') : this.canvas.classList.remove('pointer')
+
+          //     this.prtcls.forEach(e => {
+          //         if (e.selected) {
+          //             let newX = Math.round((mouse.x - e.offset.x)/10)*10
+          //             let newY = Math.round((mouse.y - e.offset.y)/10)*10
+          //             if(e.resize && (this.isScale || this.isRotate)) {
+          //                 let diff = {
+          //                     x : Math.round((mouse.x - this.startPos.x) / this.setting.diff) * this.setting.diff,
+          //                     y : Math.round((mouse.y - this.startPos.y) / this.setting.diff) * this.setting.diff,
+          //                 }
+
+          //                 if(this.isRotate) {
+          //                   this.rotate(e, mouse)
+          //                   // e.angle = this.startPos.originAngle + Math.PI / 18 * diff.x/10;
+
+          //                 } else {
+
+          //                   diff.x = e.expandX? diff.x : 0;
+          //                   diff.y = e.expandY? diff.y : 0;
+
+          //                   if(e.lockRatio) {
+          //                       diff.y = diff.x * (e.h / e.w);
+          //                   }
+
+          //                   this.scale(e, diff)
+
+          //                   e.w = Math.max(10, e.w)
+          //                   e.h = Math.max(10, e.h)
+
+          //                   // if(this.scale_direction == DIRECTION.LEFT) {
+          //                   //     e.w = this.startPos.originW - diff.x;
+          //                   //     // e.h = this.startPos.originH + diff.y;
+          //                   //     e.x = this.startPos.x + diff.x
+
+
+          //                   // } else {
+          //                   //   if(e.shape == 'round') {
+          //                   //     e.w = this.startPos.originW + diff.x;
+          //                   //     e.h = this.startPos.originH + diff.x;
+          //                   //   } else {
+          //                   //       e.w = this.startPos.originW + diff.x;
+          //                   //       e.h = this.startPos.originH + diff.y;
+          //                   //   }
+              
+          //                   //   e.w = Math.max(10, e.w)
+          //                   //   e.h = Math.max(10, e.h)
+          //                   // }
+
+
+
+          //                 }
+
+
+          //             } else {
+          //                 e.x = newX
+          //                 e.y = newY
+          //             }
+          //         }
+          //         this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle) ?
+          //             e.active != true ? e.activate() : false
+          //             : e.active = false
+          //     })
+          // }
       },
 
       handleMouseDown(e) {
@@ -948,48 +920,48 @@
                   originX: this.camera.x,
                   originY: this.camera.y
               }
-          } else {
-            let mouse = this.getMouseCoords(this.canvas, e)
-            // One Select item move flag...
-            let isSelect = false;
-            this.prtcls.forEach(e => {
-              if (!isSelect && this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle)) {
-                  isSelect = true
-                  e.selected = true
-                  e.offset = this.getOffsetCoords(mouse, e)
-                  if(e.resize) {
-                      this.startPos = {
-                          x : mouse.x,
-                          y : mouse.y,
-                          originW : e.w,
-                          originH : e.h,
-                          originAngle : e.angle
-                      }
-                      e.rotate = this.isRotate;
-                  } else {
-                    e.rotate = false;
-                  }
-              } else if ((this.isScale || this.isRotate) && e.resize) {
-                console.log("_____seeleect div")
-                  e.selected = true
-                  e.offset = this.getOffsetCoords(mouse, e)
-                  this.startPos = {
-                      x : mouse.x,
-                      y : mouse.y,
-                      originW : e.w,
-                      originH : e.h,
-                      originAngle : e.angle
-                  }
-                  e.rotate = this.isRotate;
-              } else {
-                  e.selected = false
-              }
-            })
-          }
+            }
+          // } else {
+          //   let mouse = this.getMouseCoords(this.canvas, e)
+          //   // One Select item move flag...
+          //   let isSelect = false;
+          //   this.prtcls.forEach(e => {
+          //     if (!isSelect && this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle)) {
+          //         isSelect = true
+          //         e.selected = true
+          //         e.offset = this.getOffsetCoords(mouse, e)
+          //         if(e.resize) {
+          //             this.startPos = {
+          //                 x : mouse.x,
+          //                 y : mouse.y,
+          //                 originW : e.w,
+          //                 originH : e.h,
+          //                 originAngle : e.angle
+          //             }
+          //             e.rotate = this.isRotate;
+          //         } else {
+          //           e.rotate = false;
+          //         }
+          //     } else if ((this.isScale || this.isRotate) && e.resize) {
+          //       console.log("_____seeleect div")
+          //         e.selected = true
+          //         e.offset = this.getOffsetCoords(mouse, e)
+          //         this.startPos = {
+          //             x : mouse.x,
+          //             y : mouse.y,
+          //             originW : e.w,
+          //             originH : e.h,
+          //             originAngle : e.angle
+          //         }
+          //         e.rotate = this.isRotate;
+          //     } else {
+          //         e.selected = false
+          //     }
+          //   })
+          // }
       },
 
       handleMouseUp(e) {
-        console.log("touch up")
         if(e.which == 2) {
           this.canvas.classList.remove('hand')
         } else {
@@ -1049,6 +1021,17 @@
         console.log(value)
         this.zoomLevel = 0.5 + 8.5 * value / 100;
         this.drawBG(this.ctx2)
+      },
+
+      setHallData(hallIdx) {
+        delete this.prtcls;
+        this.initTables(hallIdx)
+      },
+
+      setHallTime(hallTime = '') {
+        console.log(hallTime)
+        // delete this.prtcls;
+        // this.initTables(hallIdx)
       }
     },
 
@@ -1612,12 +1595,95 @@
           {
             "virtualHallId": "AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
             "virtualHallName": "Hall 1",
-            "tables": []
+            "tables": [
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "virtualHallId": "AADCBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "tableId": "B67F9FACDDDFFA442EA00A65AFBCB41EF63A83B8",
+                      "color": "#42a5f5",
+                      "shape": "roundRect",
+                      "name": "I1",
+                      "width": 120,
+                      "height": 120,
+                      "xPos": 420,
+                      "yPos": 120,
+                      "ETA": "20:00",
+                      "ATA": "20:12",
+                      "duration": 90,
+                      "timeLeft": 82,
+                      "slice":2,
+                      "timeLeftIcon": "mdi-slice-2",
+                      "sliceColor":"#ff0000",
+                      "fullName": "John Doe",
+                      "covers": 3,
+                      "children": null,
+                      "requests": [{"dog":1,"icon":""},{"highchair":1,"icon":""}],
+                      "foodStyles": [{"vegan":1,"icon":"mdi-leaf"},{"glutenfree":1,"icon":"mdi-barley-off"}],
+                      "reuse": true                      
+                  },
+            ]
           },
           {
-            "virtualHallId": "7F2F86B2830E0A7B1ABC18D0B04363EF8466AA65",
+            "virtualHallId": "EEECBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
             "virtualHallName": "Hall 2",
-            "tables": []
+            "tables": [
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "virtualHallId": "EEECBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "tableId": "B67F9FACDDDFFA442EA00A65AFBCB41EF63A83B8",
+                      "color": "#42a5f5",
+                      "shape": "roundRect",
+                      "name": "I1",
+                      "width": 120,
+                      "height": 120,
+                      "xPos": 420,
+                      "yPos": 120,
+                      "ETA": "20:00",
+                      "ATA": "20:12",
+                      "duration": 90,
+                      "timeLeft": 82,
+                      "slice":2,
+                      "timeLeftIcon": "mdi-slice-2",
+                      "sliceColor":"#ff0000",
+                      "fullName": "John Doe",
+                      "covers": 3,
+                      "children": null,
+                      "requests": [{"dog":1,"icon":""},{"highchair":1,"icon":""}],
+                      "foodStyles": [{"vegan":1,"icon":"mdi-leaf"},{"glutenfree":1,"icon":"mdi-barley-off"}],
+                      "reuse": true                      
+                  },
+                  {
+                      "active": true,
+                      "reserved": false,
+                      "virtualHallId": "EEECBDE475BCF7B59C55BAAC1988FAF1DD15D7E5",
+                      "hallId": "E45B1EF9A888B834C27333F826F119DFE912B5B7",
+                      "tableId": "B67F9FACDDDFFA442EA00A65AFBCB41EF63A83B8",
+                      "color": "#ffa5f5",
+                      "shape": "round",
+                      "name": "I2",
+                      "width": 120,
+                      "height": 120,
+                      "xPos": 420,
+                      "yPos": 320,
+                      "ETA": "19:00",
+                      "ATA": "19:12",
+                      "duration": 90,
+                      "timeLeft": 40,
+                      "slice":5,
+                      "timeLeftIcon": "mdi-slice-2",
+                      "sliceColor":"#ff0000",
+                      "fullName": "Robert Kal",
+                      "covers": 3,
+                      "children": null,
+                      "requests": [{"dog":1,"icon":""},{"highchair":1,"icon":""}],
+                      "foodStyles": [{"vegan":1,"icon":"mdi-leaf"},{"glutenfree":1,"icon":"mdi-barley-off"}],
+                      "reuse": true                      
+                  },
+            ]
           },
           {
             "virtualHallId": "70880A8B56A60B22965F3A67F8C395E0D0B9D3C3",
@@ -1670,8 +1736,8 @@
         this.handleMouseMove(e);
       })
 
-      window.addEventListener('mousedown', e => {
-        this.handleMouseDown(e);
+      this.canvas.addEventListener('mousedown', e => {
+        this.handleSelect(e);
       })
 
       window.addEventListener('mouseup', e => {
@@ -1693,26 +1759,25 @@
           }, 200); // Adjust the duration (in milliseconds) as needed
         }
 
-        this.detectDoubleTap(event.touches[0])
+        // this.detectDoubleTap(event.touches[0])
 
-        this.handleTouchStart(event);
-        // Check if there are at least two touch points
-        if (event.touches.length >= 2) {
-          this.canvas.classList.add('hand');
-          this.startPos = {
-            x : event.touches[0].clientX,
-            y : event.touches[0].clientY,
-            originX: this.camera.x,
-            originY: this.camera.y
-          }
-        }
+        // this.handleTouchStart(event);
+        // // Check if there are at least two touch points
+        // if (event.touches.length >= 2) {
+        //   this.canvas.classList.add('hand');
+        //   this.startPos = {
+        //     x : event.touches[0].clientX,
+        //     y : event.touches[0].clientY,
+        //     originX: this.camera.x,
+        //     originY: this.camera.y
+        //   }
+        // }
         
-        this.handleMouseDown(event.touches[0]);
+        // this.handleMouseDown(event.touches[0]);
       });
 
       // Add an event listener to the touchmove event
       window.addEventListener('touchmove', (event) => {
-        console.log("touch move-----")
 
         this.handleTouchMove(event);
         // Check if there are at least two touch points
@@ -1753,6 +1818,7 @@
       // document.getElementsByClassName("rotate").addEventListener("mousedown", e => {
       //   this.mouseDown(e)
       // })
+
 
       this.initTables()
 
