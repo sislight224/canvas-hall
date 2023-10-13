@@ -147,16 +147,13 @@ export default class Square {
 
         if(this.isBooking)
         {
-
-
-
             context.fillStyle = "red";
             context.fillRect(-this.w / 2, -10, this.w * (this.timeLeft / this.duration), 20);
 
             context.save()
-            context.fillStyle = 'white';
-            context.font = '20px material-icons';
-            context.fillText("bluetooth_searching", -this.w / 2 + 15, 0);
+            context.fillStyle = 'black';
+            context.font = '40px material-icons';
+            context.fillText("open_with", -this.w / 2 + 40, 30);
             context.restore();
 
             context.fillStyle = "white";

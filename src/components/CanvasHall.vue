@@ -398,10 +398,10 @@
         const bottomRightY = Math.sin(angleInRadians) * (x + width - centerX) + Math.cos(angleInRadians) * (y + height - centerY) + centerY;
 
         // Calculate the x and y coordinates of the edges
-        const leftEdgeXTemp = Math.min(topLeftX, bottomLeftX);
-        const rightEdgeXTemp = Math.max(topRightX, bottomRightX);
-        const topEdgeYTemp = Math.min(topLeftY, topRightY);
-        const bottomEdgeYTemp = Math.max(bottomLeftY, bottomRightY);
+        const leftEdgeXTemp = Math.min(topLeftX, bottomLeftX, topRightX, bottomRightX);
+        const rightEdgeXTemp = Math.max(topRightX, bottomRightX, topLeftX, bottomLeftX);
+        const topEdgeYTemp = Math.min(topLeftY, topRightY, bottomLeftY, bottomRightY);
+        const bottomEdgeYTemp = Math.max(bottomLeftY, bottomRightY, topLeftY, topRightY);
 
         const leftEdgeX = Math.min(leftEdgeXTemp, rightEdgeXTemp);
         const rightEdgeX = Math.max(leftEdgeXTemp, rightEdgeXTemp);
@@ -567,7 +567,7 @@
       },
       setShape(type = 'rect') {
           this.prtcls.forEach(e => {
-              if(e.resize) {
+              if(e.isChange) {
                   if(type == 'color') {
                       e.color = document.getElementById('color').value;
                   } else {
@@ -663,7 +663,7 @@
 
       SetFlipX() {
         this.prtcls.forEach((p) => {
-          if(p.resize) {
+          if(p.isChange) {
             p.flipX *= -1;
           }
         })
@@ -671,7 +671,7 @@
 
       SetFlipY() {
         this.prtcls.forEach((p) => {
-          if(p.resize) {
+          if(p.isChange) {
             p.flipY *= -1;
           }
         })
@@ -681,7 +681,7 @@
         let tableId = "";
         let index = -1;
         this.prtcls.forEach((p, i) => {
-          if(p.resize) {
+          if(p.isChange) {
             tableId = p.tableId;
             index = i;
           }
@@ -738,8 +738,10 @@
         this.prtcls.forEach(e => {
           if (this.cursorInRect(mouse.x, mouse.y, e.x, e.y, e.w, e.h, e.angle)) {
               e.resize = true
+              e.isChange = true
           } else {
               e.resize = false
+              e.isChange = false
           }
         })
 
@@ -749,6 +751,7 @@
         console.log("----set rotate")
 
         this.isRotate = true;
+        this.isAnchorStatus = true;
       },
 
       handleAnchors(event){
@@ -760,6 +763,8 @@
 
         console.log("----set direction", this.scale_direction)
         this.isScale = true;
+
+        this.isAnchorStatus = true;
       },
 
       drawSelection(){
@@ -1077,8 +1082,10 @@
             e.selected = false
           })
         }
+        console.log("--------mouse up---------")
         this.isScale = false;
         this.isRotate = false;
+        this.isAnchorStatus = false;
       },
 
       handleTouchStart(event) {
@@ -1183,6 +1190,8 @@
         isCameraMove: false,
         isRotate: false,
         isScale: false,
+        isAnchorStatus: false,
+
         scale_direction: DIRECTION.LEFT,
 
         lastTap : 0,
@@ -1759,6 +1768,22 @@
       this.canvas.addEventListener('dblclick', e => {
         this.handleSelect(e);
 
+      })
+
+      this.canvas.addEventListener("mousemove", e => {
+        // this.handleSelect(e);
+
+        if(!this.isAnchorStatus) {
+          console.log("--------mouse move-----", this.isScale)
+          let mouse = this.getMouseCoords(this.canvas, e);
+          this.prtcls.forEach(e => {
+            if (this.cursorInRect(mouse.x, mouse.y, e.x - 20, e.y - 20, e.w + 40, e.h + 40, e.angle)) {
+                e.resize = true
+            } else {
+                e.resize = false
+            }
+          })
+        }
       })
 
       window.addEventListener('mousemove', e => {

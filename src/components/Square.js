@@ -37,6 +37,7 @@ export default class Square {
         this.selected = false
         this.active = false
         this.resize = false
+        this.isChange = false
     }
     draw(context) {
         context.save();
@@ -46,7 +47,7 @@ export default class Square {
         let realX = this.x + this.camera.x;
         let realY = this.y + this.camera.y;
 
-        if (this.active || this.resize) {
+        if (this.active || this.resize || this.isChange) {
             let rect = this.getRealMouseRect(realX, realY, this.w, this.h, this.angle)
 
             context.fillStyle = this.color;
@@ -131,7 +132,7 @@ export default class Square {
             //context.fillText(booking.children?booking.covers + '+' + booking.children:booking.covers,this.x+(this.w/2),this.y+this.h-30); 
             //context.fillText(booking.time,this.x+(this.w/2),this.y+this.h-10);     
         }
-            if (this.selected || this.resize) {
+            if (this.selected || this.resize || this.isChange) {
                 context.lineWidth = 2;
                 context.strokeStyle = this.activeColor2
                 context.strokeRect(-this.w / 2, -this.h / 2, this.w, this.h)

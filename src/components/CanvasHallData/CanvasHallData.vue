@@ -465,6 +465,7 @@
             y: (event.clientY - canvasCoords.top) / this.zoomLevel
         }
       },
+
       getIt(type = '') {
           let json = [];
           if(type == 'tables') {
@@ -492,6 +493,28 @@
 
           return json;
       },
+
+      getSelectedData() {
+        let json = [];
+
+        this.prtcls.forEach(e => {
+          if(e.resize) {
+            json.push({
+              "active":true,
+              "tableId": e.tableId,
+              "tableName": e.table,
+              "width": e.w,
+              "height": e.h,
+              "shape": e.shape,
+              "x": e.x,
+              "y": e.y
+            });
+          }
+        })
+
+        return json
+      },
+
       setShape(type = 'rect') {
           this.prtcls.forEach(e => {
               if(e.resize) {
@@ -567,6 +590,7 @@
         let tables = this.getIt('tables');
         this.virtualHallJSON[0]['tables'] = tables;
         console.log("Virtual Hall Json Data :  ", this.virtualHallJSON)
+        console.log("Select Data Json : ", this.getSelectedData())
       },
 
       isHandleAnchor() {
